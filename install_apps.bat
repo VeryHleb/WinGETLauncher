@@ -18,11 +18,17 @@ set "TG_SRC=%EXE_DIR%\TgWsProxy_windows_7_64bit.exe"
 set "TG_TASK=TgWsProxy"
 
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+
+:: Auto-cleanup logs older than 30 days (BEFORE creating new one)
 forfiles /p "%LOG_DIR%" /m install_*.log /d -30 /c "cmd /c del @path" >nul 2>&1
 
+:: Build log file name
 for /f "tokens=1-4 delims=/:. " %%a in ("%date% %time%") do set "STAMP=%%d%%b%%c_%%a"
 if "%STAMP%"=="" set "STAMP=%RANDOM%"
 set "LOG_FILE=%LOG_DIR%\install_%STAMP%.log"
+
+:: Create log file immediately so nobody else holds it
+echo. > "%LOG_FILE%"
 
 echo [INFO] Log file: %LOG_FILE%
 echo [INFO] Repository: %REPO_FILE%
@@ -33,6 +39,9 @@ echo   Repository: %REPO_FILE%                                 >> "%LOG_FILE%"
 echo   Manager: %PKG_MGR%                                       >> "%LOG_FILE%"
 echo ============================================================ >> "%LOG_FILE%"
 
+:: ============================================================
+:: Check Administrator rights
+:: ============================================================
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo [WARN] Not running as Administrator.
@@ -41,6 +50,9 @@ if %errorLevel% neq 0 (
     echo [WARN] Not running as Administrator >> "%LOG_FILE%"
 )
 
+:: ============================================================
+:: Check repository file
+:: ============================================================
 if not exist "%REPO_FILE%" (
     echo [ERROR] Repository file not found: %REPO_FILE%
     echo [ERROR] Repository file not found >> "%LOG_FILE%"
@@ -49,6 +61,9 @@ if not exist "%REPO_FILE%" (
     exit /b 2
 )
 
+:: ============================================================
+:: Package manager availability
+:: ============================================================
 if "%PKG_MGR%"=="winget" (
     where winget >nul 2>&1
     if !errorLevel! neq 0 (
@@ -74,6 +89,9 @@ if "%PKG_MGR%"=="choco" (
     )
 )
 
+:: ============================================================
+:: Counters
+:: ============================================================
 set /a CNT_OK=0
 set /a CNT_SKIP=0
 set /a CNT_FAIL=0
@@ -86,48 +104,115 @@ echo   Installing apps via %PKG_MGR% (from repository)
 echo ===================================================
 echo.
 
+:: ============================================================
+:: Read repository and process each line
+:: Format: winget.id|choco.id|Name|source
+:: ============================================================
 for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
     set "RAW_LINE=%%L"
 
+    :: Strip BOM
     if defined RAW_LINE (
         for /f "tokens=1 delims=﻿" %%B in ("!RAW_LINE!") do set "RAW_LINE=%%B"
     )
 
     if not "!RAW_LINE!"=="" (
         set "APP_ID="
+        set "APP_CHOCO="
+        set "APP_NAME="
+        set "APP_SOURCE="
 
+        :: Parse: winget.id|choco.id|Name|source
         echo !RAW_LINE! | findstr /c:"|" >nul
         if !errorLevel! equ 0 (
-            for /f "tokens=1 delims=|" %%A in ("!RAW_LINE!") do set "APP_ID=%%A"
+            for /f "tokens=1,2,3,4 delims=|" %%A in ("!RAW_LINE!") do (
+                set "APP_ID=%%A"
+                set "APP_CHOCO=%%B"
+                set "APP_NAME=%%C"
+                set "APP_SOURCE=%%D"
+            )
         ) else (
             set "APP_ID=!RAW_LINE!"
         )
-        for /f "tokens=* delims= " %%T in ("!APP_ID!") do set "APP_ID=%%T"
+
+        :: Trim spaces
+        for /f "tokens=* delims= " %%T in ("!APP_ID!")     do set "APP_ID=%%T"
+        for /f "tokens=* delims= " %%T in ("!APP_CHOCO!")  do set "APP_CHOCO=%%T"
+        for /f "tokens=* delims= " %%T in ("!APP_NAME!")   do set "APP_NAME=%%T"
+        for /f "tokens=* delims= " %%T in ("!APP_SOURCE!") do set "APP_SOURCE=%%T"
+
+        :: Default source
+        if "!APP_SOURCE!"=="" set "APP_SOURCE=winget"
 
         if not "!APP_ID!"=="" (
             set /a CNT_TOTAL+=1
             echo ---------------------------------------------------
-            echo [INSTALL] !APP_ID!
+            echo [INSTALL] !APP_ID!  ^(source: !APP_SOURCE!^)
             echo ---------------------------------------------------
-            echo [INSTALL] !APP_ID! >> "%LOG_FILE%"
+            echo [INSTALL] !APP_ID! ^(source: !APP_SOURCE!^) >> "%LOG_FILE%"
 
+            :: Detect Telegram
             echo !APP_ID! | findstr /i "telegram" >nul
             if !errorLevel! equ 0 set "TG_FOUND=1"
 
-            call :ProcessOne "!APP_ID!"
+            call :ProcessOne "!APP_ID!" "!APP_CHOCO!" "!APP_SOURCE!"
         )
     )
 )
 goto :after_loop
 
+:: ============================================================
+:: Subroutine: process one package
+:: ============================================================
 :ProcessOne
     setlocal
     set "PKG=%~1"
+    set "CHOCO_ID=%~2"
+    set "SRC=%~3"
     set "MGR=%PKG_MGR%"
 
-    if "!MGR!"=="winget" goto :use_winget
-    if "!MGR!"=="choco"  goto :use_choco
-    goto :install_fail
+    if "!SRC!"=="" set "SRC=winget"
+
+    :: ---- choco manager (Win7) ----
+    if "!MGR!"=="choco" (
+        if "!SRC!"=="msstore" (
+            echo [SKIP] !PKG! ^(msstore not supported on Windows 7^).
+            echo [SKIP] !PKG! ^(msstore not supported^) >> "%LOG_FILE%"
+            endlocal & set /a CNT_SKIP+=1
+            exit /b 0
+        )
+        if "!CHOCO_ID!"=="" (
+            echo [SKIP] !PKG! ^(no choco.id^).
+            echo [SKIP] !PKG! ^(no choco.id^) >> "%LOG_FILE%"
+            endlocal & set /a CNT_SKIP+=1
+            exit /b 0
+        )
+        goto :use_choco
+    )
+
+    :: ---- winget manager ----
+    if "!SRC!"=="msstore" goto :use_msstore
+    goto :use_winget
+
+:use_msstore
+    set "FOUND=0"
+    for /f "delims=" %%O in ('winget list --id "!PKG!" --source msstore 2^>nul') do (
+        echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
+        if not errorlevel 1 set "FOUND=1"
+    )
+    if "!FOUND!"=="1" (
+        echo [SKIP] !PKG! already installed ^(msstore^).
+        echo [SKIP] !PKG! ^(msstore^) >> "%LOG_FILE%"
+        endlocal & set /a CNT_SKIP+=1
+        exit /b 0
+    )
+    set "ATTEMPT=0"
+    :retry_ms
+        winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
+        if not errorlevel 1 goto :install_ok
+        set /a ATTEMPT+=1
+        if !ATTEMPT! lss 3 ( timeout /t 2 /nobreak >nul & goto :retry_ms )
+        goto :install_fail
 
 :use_winget
     set "FOUND=0"
@@ -151,38 +236,41 @@ goto :after_loop
 
 :use_choco
     set "FOUND=0"
-    for /f "delims=" %%O in ('choco list --local-only "!PKG!" 2^>nul') do (
-        echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
+    for /f "delims=" %%O in ('choco list --local-only "!CHOCO_ID!" 2^>nul') do (
+        echo %%O | findstr /i /c:"!CHOCO_ID!" >nul 2>&1
         if not errorlevel 1 set "FOUND=1"
     )
     if "!FOUND!"=="1" (
-        echo [SKIP] !PKG! already installed ^(choco^).
-        echo [SKIP] !PKG! >> "%LOG_FILE%"
+        echo [SKIP] !CHOCO_ID! already installed ^(choco^).
+        echo [SKIP] !CHOCO_ID! ^(choco^) >> "%LOG_FILE%"
         endlocal & set /a CNT_SKIP+=1
         exit /b 0
     )
     set "ATTEMPT=0"
     :retry_c
-        choco install "!PKG!" -y --no-progress >> "%LOG_FILE%" 2>&1
+        choco install "!CHOCO_ID!" -y --no-progress >> "%LOG_FILE%" 2>&1
         if not errorlevel 1 goto :install_ok
         set /a ATTEMPT+=1
         if !ATTEMPT! lss 3 ( timeout /t 3 /nobreak >nul & goto :retry_c )
         goto :install_fail
 
 :install_ok
-    echo [OK] !PKG! installed ^(!MGR!^).
-    echo [OK] !PKG! ^(!MGR!^) >> "%LOG_FILE%"
+    echo [OK] !PKG! installed.
+    echo [OK] !PKG! >> "%LOG_FILE%"
     endlocal & set /a CNT_OK+=1
     exit /b 0
 
 :install_fail
-    echo [WARN] Failed to install !PKG! ^(!MGR!^).
-    echo [FAIL] !PKG! ^(!MGR!^) >> "%LOG_FILE%"
-    endlocal & set /a CNT_FAIL+=1 & set "FAILED_LIST=%FAILED_LIST% %~1"
+    echo [WARN] Failed to install !PKG!.
+    echo [FAIL] !PKG! >> "%LOG_FILE%"
+    endlocal & set /a CNT_FAIL+=1 & set "FAILED_LIST=%FAILED_LIST% !PKG!"
     exit /b 1
 
 :after_loop
 
+:: ============================================================
+:: Summary
+:: ============================================================
 echo ===================================================
 echo   SUMMARY
 echo ===================================================
@@ -208,7 +296,7 @@ echo =================================================== >> "%LOG_FILE%"
 echo   Session ended at %date% %time% >> "%LOG_FILE%"
 
 :: ============================================================
-:: TgWsProxy
+:: TgWsProxy — only if Telegram was selected
 :: ============================================================
 if "%TG_FOUND%"=="0" goto :tg_done
 
