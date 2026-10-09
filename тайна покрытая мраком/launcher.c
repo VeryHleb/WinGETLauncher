@@ -169,7 +169,7 @@ static BOOL GetVersionPath(wchar_t* out, size_t cch) {
 }
 
 // ============================================================
-// EnsurePathExists — creates all intermediate folders
+// EnsurePathExists
 // ============================================================
 static void EnsurePathExists(const wchar_t* fullPath) {
     wchar_t buf[MAX_PATH];
@@ -327,7 +327,6 @@ static BOOL ReadLocalVersion(wchar_t* out, size_t cch) {
     return TRUE;
 }
 
-// Write version.txt WITHOUT BOM
 static BOOL WriteLocalVersion(const wchar_t* ver) {
     wchar_t path[MAX_PATH];
     if (!GetVersionPath(path, MAX_PATH)) return FALSE;
@@ -392,14 +391,12 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
     wchar_t dir[MAX_PATH];
     GetExeDir(dir, MAX_PATH);
 
-    // Create required folders
     wchar_t sourceDir[MAX_PATH], exeDir[MAX_PATH];
     _snwprintf(sourceDir, MAX_PATH, L"%ssource", dir);
     _snwprintf(exeDir,    MAX_PATH, L"%ssource\\exe", dir);
     CreateDirectoryW(sourceDir, NULL);
     CreateDirectoryW(exeDir, NULL);
 
-    // Download files list
     wchar_t tmpFilesList[MAX_PATH];
     _snwprintf(tmpFilesList, MAX_PATH, L"%ssource_files.tmp.txt", dir);
 
@@ -413,7 +410,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         return 0;
     }
 
-    // Read list and download each file
     FILE* fl = _wfopen(tmpFilesList, L"rb");
     if (!fl) {
         DeleteFileW(tmpFilesList);
@@ -448,7 +444,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         wchar_t fullUrl[1024];
         _snwprintf(fullUrl, 1024, L"%ls%ls", GH_RAW_BASE, relPathW);
 
-        // Replace / with \
         for (wchar_t* q = relPathW; *q; q++) if (*q == L'/') *q = L'\\';
 
         wchar_t fullPath[MAX_PATH];
@@ -472,7 +467,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
     fclose(fl);
     DeleteFileW(tmpFilesList);
 
-    // Update local version.txt (no BOM)
     WriteLocalVersion(remoteVer);
 
     dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
@@ -547,12 +541,13 @@ static void AppendOutputA(const char* text) {
 }
 
 // ============================================================
-// Repository parser
+// Repository parser: winget.id|choco.id|Name|source
 // Returns: 1 = package, 2 = category, 0 = EOF
 // ============================================================
 static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
                                    wchar_t* out_choco, size_t choco_cch,
-                                   wchar_t* out_name, size_t name_cch) {
+                                   wchar_t* out_name, size_t name_cch,
+                                   wchar_t* out_source, size_t source_cch) {
     char line[512];
     while (fgets(line, sizeof(line), f)) {
         char* p = line;
@@ -567,6 +562,7 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
         if (*p == '\0') continue;
         if (*p == '#') continue;
 
+        // Category
         if (*p == '[') {
             char* close = strchr(p, ']');
             if (close) {
@@ -585,15 +581,26 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
             continue;
         }
 
+        // Package
         char* part1 = p;
         char* part2 = NULL;
         char* part3 = NULL;
+        char* part4 = NULL;
+
         char* bar1 = strchr(p, '|');
         if (bar1) {
             *bar1 = '\0';
             part2 = bar1 + 1;
             char* bar2 = strchr(part2, '|');
-            if (bar2) { *bar2 = '\0'; part3 = bar2 + 1; }
+            if (bar2) {
+                *bar2 = '\0';
+                part3 = bar2 + 1;
+                char* bar3 = strchr(part3, '|');
+                if (bar3) {
+                    *bar3 = '\0';
+                    part4 = bar3 + 1;
+                }
+            }
         }
 
         #define TRIM(s) do { \
@@ -605,37 +612,48 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
         TRIM(part1);
         if (part2) TRIM(part2);
         if (part3) TRIM(part3);
+        if (part4) TRIM(part4);
         if (*part1 == '\0') continue;
 
         int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part1, -1, NULL, 0);
         if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part1, -1, out_id, (int)id_cch);
         else          MultiByteToWideChar(CP_ACP, 0, part1, -1, out_id, (int)id_cch);
 
-        if (part3) {
+        // choco.id
+        if (part2 && *part2 != '\0') {
             wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part2, -1, NULL, 0);
             if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part2, -1, out_choco, (int)choco_cch);
             else          MultiByteToWideChar(CP_ACP, 0, part2, -1, out_choco, (int)choco_cch);
+        } else {
+            out_choco[0] = L'\0';
+        }
 
+        // Name
+        if (part3 && *part3 != '\0') {
             wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part3, -1, NULL, 0);
             if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part3, -1, out_name, (int)name_cch);
             else          MultiByteToWideChar(CP_ACP, 0, part3, -1, out_name, (int)name_cch);
-        } else if (part2 && *part2 != '\0') {
-            out_choco[0] = L'\0';
-            wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part2, -1, NULL, 0);
-            if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part2, -1, out_name, (int)name_cch);
-            else          MultiByteToWideChar(CP_ACP, 0, part2, -1, out_name, (int)name_cch);
         } else {
-            out_choco[0] = L'\0';
             wcsncpy(out_name, out_id, name_cch);
             out_name[name_cch - 1] = L'\0';
         }
+
+        // Source
+        if (part4 && *part4 != '\0') {
+            wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part4, -1, NULL, 0);
+            if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part4, -1, out_source, (int)source_cch);
+            else          MultiByteToWideChar(CP_ACP, 0, part4, -1, out_source, (int)source_cch);
+        } else {
+            wcscpy(out_source, L"winget");
+        }
+
         return 1;
     }
     return 0;
 }
 
 // ============================================================
-// LoadRepository — categories as plain rows
+// LoadRepository — 4 columns: Name (vis), ID (hidden), Choco (hidden), Source (hidden)
 // ============================================================
 static void LoadRepository(void) {
     wchar_t repoPath[MAX_PATH];
@@ -656,13 +674,14 @@ static void LoadRepository(void) {
 
     SendMessageW(g_hList, LVM_DELETEALLITEMS, 0, 0);
 
-    wchar_t w_id[256], w_choco[256], w_name[256];
+    wchar_t w_id[256], w_choco[256], w_name[256], w_source[128];
     int idx = 0;
     int skipped = 0;
     int rc;
 
-    while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256)) != 0) {
+    while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256, w_source, 128)) != 0) {
         if (rc == 2) {
+            // Category as plain row
             wchar_t header[300];
             _snwprintf(header, 300, L"── %ls ──", w_name);
 
@@ -673,24 +692,38 @@ static void LoadRepository(void) {
             item.pszText = header;
             int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-            LVITEMW sub = {0};
-            sub.mask = LVIF_TEXT;
-            sub.iItem = row;
-            sub.iSubItem = 1;
-            sub.pszText = L"";
-            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
+            // Empty ID = category
+            LVITEMW sub1 = {0};
+            sub1.mask = LVIF_TEXT;
+            sub1.iItem = row; sub1.iSubItem = 1;
+            sub1.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
+
+            LVITEMW sub2 = {0};
+            sub2.mask = LVIF_TEXT;
+            sub2.iItem = row; sub2.iSubItem = 2;
+            sub2.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
+
+            LVITEMW sub3 = {0};
+            sub3.mask = LVIF_TEXT;
+            sub3.iItem = row; sub3.iSubItem = 3;
+            sub3.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub3);
 
             ListView_SetCheckState(g_hList, row, FALSE);
             idx++;
             continue;
         }
 
+        // Skip if no active ID for current manager
         const wchar_t* active_id = NULL;
         if (g_PkgMgr == PKG_MGR_WINGET) active_id = w_id;
         else if (g_PkgMgr == PKG_MGR_CHOCO) active_id = w_choco;
 
         if (!active_id || active_id[0] == L'\0') { skipped++; continue; }
 
+        // Row
         LVITEMW item = {0};
         item.mask = LVIF_TEXT;
         item.iItem = idx;
@@ -698,12 +731,26 @@ static void LoadRepository(void) {
         item.pszText = w_name;
         int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-        LVITEMW sub = {0};
-        sub.mask = LVIF_TEXT;
-        sub.iItem = row;
-        sub.iSubItem = 1;
-        sub.pszText = (LPWSTR)active_id;
-        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
+        // Col 1: winget ID
+        LVITEMW sub1 = {0};
+        sub1.mask = LVIF_TEXT;
+        sub1.iItem = row; sub1.iSubItem = 1;
+        sub1.pszText = w_id;
+        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
+
+        // Col 2: choco ID
+        LVITEMW sub2 = {0};
+        sub2.mask = LVIF_TEXT;
+        sub2.iItem = row; sub2.iSubItem = 2;
+        sub2.pszText = w_choco;
+        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
+
+        // Col 3: source
+        LVITEMW sub3 = {0};
+        sub3.mask = LVIF_TEXT;
+        sub3.iItem = row; sub3.iSubItem = 3;
+        sub3.pszText = w_source;
+        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub3);
 
         ListView_SetCheckState(g_hList, row, TRUE);
         idx++;
@@ -724,29 +771,48 @@ static int GetCheckedCount(void) {
     for (int i = 0; i < count; i++) {
         wchar_t idbuf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;
+        if (idbuf[0] == L'\0') continue;  // category
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
 }
 
+// Write repositories.tmp.txt with 4 columns: winget.id|choco.id|Name|source
 static BOOL WriteTmpRepo(const wchar_t* path) {
     FILE* f = _wfopen(path, L"wb");
     if (!f) return FALSE;
 
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
-        wchar_t buf[256] = {0};
-        ListView_GetItemText(g_hList, i, 1, buf, 256);
-        if (buf[0] == L'\0') continue;
+        wchar_t wid[256]    = {0};
+        wchar_t wchoco[256] = {0};
+        wchar_t wname[256]  = {0};
+        wchar_t wsrc[128]   = {0};
+
+        ListView_GetItemText(g_hList, i, 1, wid,    256);
+        if (wid[0] == L'\0') continue;  // category
+
         if (!ListView_GetCheckState(g_hList, i)) continue;
 
-        char utf8[1024];
-        int len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, 1024, NULL, NULL);
-        if (len > 1) {
-            fwrite(utf8, 1, len - 1, f);
-            fwrite("\n", 1, 1, f);
-        }
+        ListView_GetItemText(g_hList, i, 0, wname,  256);
+        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
+        ListView_GetItemText(g_hList, i, 3, wsrc,   128);
+        if (wsrc[0] == L'\0') wcscpy(wsrc, L"winget");
+
+        char utf8_wid[1024];
+        char utf8_choco[1024];
+        char utf8_name[1024];
+        char utf8_src[512];
+
+        WideCharToMultiByte(CP_UTF8, 0, wid,    -1, utf8_wid,   1024, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wchoco, -1, utf8_choco, 1024, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wname,  -1, utf8_name,  1024, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wsrc,   -1, utf8_src,    512, NULL, NULL);
+
+        char line[4096];
+        _snprintf(line, sizeof(line), "%s|%s|%s|%s\n",
+                  utf8_wid, utf8_choco, utf8_name, utf8_src);
+        fwrite(line, 1, strlen(line), f);
     }
     fclose(f);
     return TRUE;
@@ -904,7 +970,7 @@ static void SetAllCheckState(BOOL state) {
 }
 
 // ============================================================
-// Search thread
+// Search
 // ============================================================
 static DWORD WINAPI SearchThread(LPVOID param) {
     (void)param;
@@ -1035,7 +1101,8 @@ static void AddSelectedToRepo(void) {
         MessageBoxW(g_hSearchWnd, L"Не удалось открыть repositories.txt", L"Ошибка", MB_ICONERROR);
         return;
     }
-    fwprintf(f, L"%ls||%ls\n", id, name);
+    // Format: winget.id||Name|winget
+    fwprintf(f, L"%ls||%ls|winget\n", id, name);
     fclose(f);
 
     wchar_t msg[512];
@@ -1247,15 +1314,29 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         ListView_SetExtendedListViewStyle(g_hList,
             LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
+        // Column 0: Name (visible)
         LVCOLUMNW col0 = {0};
         col0.mask = LVCF_TEXT | LVCF_WIDTH;
         col0.pszText = L"Программа"; col0.cx = 300;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 0, (LPARAM)&col0);
 
+        // Column 1: winget ID (hidden)
         LVCOLUMNW col1 = {0};
         col1.mask = LVCF_TEXT | LVCF_WIDTH;
         col1.pszText = L"ID"; col1.cx = 0;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 1, (LPARAM)&col1);
+
+        // Column 2: choco ID (hidden)
+        LVCOLUMNW col2 = {0};
+        col2.mask = LVCF_TEXT | LVCF_WIDTH;
+        col2.pszText = L"Choco"; col2.cx = 0;
+        SendMessageW(g_hList, LVM_INSERTCOLUMNW, 2, (LPARAM)&col2);
+
+        // Column 3: source (hidden)
+        LVCOLUMNW col3 = {0};
+        col3.mask = LVCF_TEXT | LVCF_WIDTH;
+        col3.pszText = L"Source"; col3.cx = 0;
+        SendMessageW(g_hList, LVM_INSERTCOLUMNW, 3, (LPARAM)&col3);
 
         SendMessageW(g_hList, WM_SETFONT, (WPARAM)g_hFont, TRUE);
 
