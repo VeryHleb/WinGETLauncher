@@ -1,0 +1,150 @@
+============================================================ 
+  winget install session started at 07.10.2026 23:09:34,63         
+============================================================ 
+============================================================ 
+  winget install session started at 07.10.2026 23:09:37,90         
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+[SKIP] Discord.Discord 
+[INSTALL] Telegram.TelegramDesktop 
+============================================================ 
+  winget install session started at 07.10.2026 23:12:34,94         
+============================================================ 
+============================================================ 
+  winget install session started at 07.10.2026 23:12:40,50         
+============================================================ 
+[INFO] Repository file: E:\YandexDisk\WinGET\source\repositories.txt 
+[WARN] winget not found 
+[INFO] Running bootstrap 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+Найдено Discord [Discord.Discord] Версия 1.0.9261
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://dl.discordapp.net/distro/app/stable/win/x64/1.0.9261/DiscordSetup.exe
+^C============================================================ 
+  winget install session started at 07.10.2026 23:14:08,05         
+============================================================ 
+============================================================ 
+  winget install session started at 07.10.2026 23:14:10,92         
+============================================================ 
+[INFO] Repository file: E:\YandexDisk\WinGET\source\repositories.txt 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+Найдено Discord [Discord.Discord] Версия 1.0.9261
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://dl.discordapp.net/distro/app/stable/win/x64/1.0.9261/DiscordSetup.exe
+^C============================================================ 
+  winget install session started at 07.10.2026 23:14:57,20         
+============================================================ 
+============================================================ 
+  winget install session started at 07.10.2026 23:15:00,15         
+============================================================ 
+[INFO] Repository file: E:\YandexDisk\WinGET\source\repositories.txt 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+Найдено Discord [Discord.Discord] Версия 1.0.9261
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://dl.discordapp.net/distro/app/stable/win/x64/1.0.9261/DiscordSetup.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Discord.Discord 
+[INSTALL] Telegram.TelegramDesktop 
+[INFO] Telegram detected 
+Найдено Telegram Desktop [Telegram.TelegramDesktop] Версия 7.2.9
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://github.com/telegramdesktop/tdesktop/releases/download/v7.2.9/td-setup-win-x64-7.2.9.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Telegram.TelegramDesktop 
+[INSTALL] Valve.Steam 
+Найдено Steam [Valve.Steam] Версия 2.10.91.91
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Valve.Steam 
+[INSTALL] Yandex.Disk 
+Найдено Yandex.Disk [Yandex.Disk] Версия 3.2.51.5200
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://disk.cdn.yandex.net/update/stable/12fe7e24f54b666931030e2ea3dae321/YandexDisk30Setup_x64.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Yandex.Disk 
+[INSTALL] Rufus.Rufus 
+Найдено Rufus [Rufus.Rufus] Версия 4.15
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://github.com/pbatard/rufus/releases/download/v4.15/rufus-4.15.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Добавлен псевдоним командной строки: "rufus"
+Переменная среды пути изменена; перезапустите оболочку, чтобы использовать новое значение.
+Успешно установлено
+[OK] Rufus.Rufus 
+[INSTALL] VideoLAN.VLC 
+Найдено VLC media player [VideoLAN.VLC] Версия 3.0.24
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://download.videolan.org/pub/videolan/vlc/3.0.24/win64/vlc-3.0.24-win64.msi
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Уже выполняется другая установка. Повторите попытку позже.
+Сбой установки с кодом выхода: 1618
+Журнал установщика доступен по адресу: C:\Users\KIRILL\AppData\Local\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir\VideoLAN.VLC.3.0.24-26-10-07-23-17-48.log
+[WARN] Failed to install VideoLAN.VLC. Exit code: -1978334974
+[FAIL] VideoLAN.VLC (exit -1978334974
+[INSTALL] RARLab.WinRAR 
+Найдено WinRAR [RARLab.WinRAR] Версия 7.23.0
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://www.rarlab.com/rar/winrar-x64-723ru.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] RARLab.WinRAR 
+[INSTALL] Mozilla.Firefox 
+Найдено Mozilla Firefox (en-US) [Mozilla.Firefox] Версия 157.0.1
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://download-installer.cdn.mozilla.net/pub/firefox/releases/157.0.1/win64/en-US/Firefox%20Setup%20157.0.1.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Mozilla.Firefox 
+=================================================== 
+  SUMMARY 
+  Total     : 8 
+  Installed : 7 
+  Skipped   : 0 
+  Failed    : 8 
+  Failed list: Discord.Discord Telegram.TelegramDesktop Valve.Steam Yandex.Disk Rufus.Rufus VideoLAN.VLC RARLab.WinRAR Mozilla.Firefox 
+  Telegram  : 1 
+=================================================== 
+  Session ended at 07.10.2026 23:19:05,99 
+  TgWsProxy setup 
+[INFO] Setting up TgWsProxy 
+[OK] Source: E:\YandexDisk\WinGET\source\exe\TgWsProxy_windows_7_64bit.exe 
+[INFO] Creating folder: C:\Program Files\TgWsProxy 
+[INFO] Copying to C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+        1 file(s) copied.
+[OK] Copy successful 
+[INFO] Creating autostart task 
+SUCCESS: The scheduled task "TgWsProxy" has successfully been created.
+[OK] Autostart task created 
+[INFO] Launching from C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+[OK] TgWsProxy launched 
