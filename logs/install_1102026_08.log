@@ -1,0 +1,76 @@
+============================================================ 
+  winget install session started at 08.10.2026  1:38:48,20         
+============================================================ 
+============================================================ 
+  winget install session started at 08.10.2026  1:38:51,07         
+============================================================ 
+[INFO] Repository file: E:\YandexDisk\WinGET\source\repositories.txt 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+[SKIP] Discord.Discord 
+[INSTALL] Telegram.TelegramDesktop 
+[INFO] Telegram detected 
+[SKIP] Telegram.TelegramDesktop 
+[INSTALL] Valve.Steam 
+[SKIP] Valve.Steam 
+[INSTALL] Yandex.Disk 
+[SKIP] Yandex.Disk 
+[INSTALL] Rufus.Rufus 
+[SKIP] Rufus.Rufus 
+[INSTALL] VideoLAN.VLC 
+Найдено VLC media player [VideoLAN.VLC] Версия 3.0.24
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] VideoLAN.VLC 
+=================================================== 
+  SUMMARY 
+  Total     : 6 
+  Installed : 1 
+  Skipped   : 5 
+  Failed    : 1 
+  Failed list: VideoLAN.VLC 
+  Telegram  : 1 
+=================================================== 
+  Session ended at 08.10.2026  1:39:03,70 
+  TgWsProxy setup 
+[INFO] Setting up TgWsProxy 
+[OK] Source: E:\YandexDisk\WinGET\source\exe\TgWsProxy_windows_7_64bit.exe 
+[INFO] Folder already exists 
+[INFO] Copying to C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+The process cannot access the file because it is being used by another process.
+        0 file(s) copied.
+[OK] Copy successful 
+[INFO] Removing old task 
+SUCCESS: The scheduled task "TgWsProxy" was successfully deleted.
+[INFO] Creating autostart task 
+SUCCESS: The scheduled task "TgWsProxy" has successfully been created.
+[OK] Autostart task created 
+[INFO] Launching from C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+[OK] TgWsProxy launched 
+============================================================ 
+  winget install session started at 08.10.2026  1:49:22,40         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[WARN] Not running as Administrator 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] ﻿Rufus.Rufus 
+Не найдены пакеты, совпадающие с введенными условиями.
+[WARN] Failed to install ﻿Rufus.Rufus. Exit code: -1978335212
+[FAIL] ﻿Rufus.Rufus (exit -1978335212
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 0 
+  Failed    : 1 
+  Failed list: ﻿Rufus.Rufus 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 08.10.2026  1:49:23,87 
+  TgWsProxy setup 
+[SKIP] TgWsProxy: Telegram not in repo 

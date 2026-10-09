@@ -1,0 +1,246 @@
+============================================================ 
+  winget install session started at 09.10.2026  0:05:32,64         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] RARLab.WinRAR 
+[SKIP] RARLab.WinRAR 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 1 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:05:36,29 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:06:17,45         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] RARLab.WinRAR 
+[SKIP] RARLab.WinRAR 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 1 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:06:18,31 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:06:32,72         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] 7zip.7zip 
+[SKIP] 7zip.7zip 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 1 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:06:33,57 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:20:18,08         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Discord.Discord 
+[SKIP] Discord.Discord 
+[INSTALL] Telegram.TelegramDesktop 
+[INFO] Telegram detected 
+[SKIP] Telegram.TelegramDesktop 
+[INSTALL] Valve.Steam 
+[SKIP] Valve.Steam 
+[INSTALL] Yandex.Disk 
+[SKIP] Yandex.Disk 
+[INSTALL] RARLab.WinRAR 
+[SKIP] RARLab.WinRAR 
+[INSTALL] 7zip.7zip 
+[SKIP] 7zip.7zip 
+[INSTALL] VideoLAN.VLC 
+[SKIP] VideoLAN.VLC 
+[INSTALL] AIMP.AIMP 
+[SKIP] AIMP.AIMP 
+[INSTALL] Rufus.Rufus 
+[SKIP] Rufus.Rufus 
+[INSTALL] RevoUninstaller.RevoUninstaller 
+[SKIP] RevoUninstaller.RevoUninstaller 
+[INSTALL] Oracle.VirtualBox 
+[SKIP] Oracle.VirtualBox 
+[INSTALL] Ghisler.TotalCommander 
+[SKIP] Ghisler.TotalCommander 
+[INSTALL] Notepad++.Notepad++ 
+[SKIP] Notepad++.Notepad++ 
+[INSTALL] Mozilla.Firefox 
+[SKIP] Mozilla.Firefox 
+=================================================== 
+  SUMMARY 
+  Total     : 14 
+  Installed : 0 
+  Skipped   : 14 
+  Failed    : 0 
+  Telegram  : 1 
+=================================================== 
+  Session ended at 09.10.2026  0:20:31,62 
+  TgWsProxy setup 
+[INFO] Setting up TgWsProxy 
+[OK] Source: E:\YandexDisk\WinGET\source\exe\TgWsProxy_windows_7_64bit.exe 
+[INFO] Copying to C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+The process cannot access the file because it is being used by another process.
+        0 file(s) copied.
+[OK] Copy successful 
+[INFO] Removing old task 
+SUCCESS: The scheduled task "TgWsProxy" was successfully deleted.
+[INFO] Creating autostart task 
+SUCCESS: The scheduled task "TgWsProxy" has successfully been created.
+[OK] Autostart task created 
+[INFO] Launching from C:\Program Files\TgWsProxy\TgWsProxy_windows_7_64bit.exe 
+[OK] TgWsProxy launched 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:27:26,97         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+---------------------------------------------------
+[INSTALL] RARLab.WinRAR
+---------------------------------------------------
+[WARN] Failed to install . Exit code: 2
+[FAIL]  (exit 2
+============================================================ 
+  winget install session started at 09.10.2026  0:28:53,87         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+---------------------------------------------------
+[INSTALL] 7zip.7zip
+---------------------------------------------------
+============================================================ 
+  winget install session started at 09.10.2026  0:29:46,36         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] RARLab.WinRAR 
+Найдено WinRAR [RARLab.WinRAR] Версия 7.23.0
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://www.rarlab.com/rar/winrar-x64-723ru.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] RARLab.WinRAR 
+[INSTALL] 7zip.7zip 
+Найдено 7-Zip [7zip.7zip] Версия 26.04
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://www.7-zip.org/a/7z2604-x64.msi
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] 7zip.7zip 
+=================================================== 
+  SUMMARY 
+  Total     : 2 
+  Installed : 2 
+  Skipped   : 0 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:30:16,13 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:37:54,16         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Oracle.VirtualBox 
+[SKIP] Oracle.VirtualBox 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 1 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:37:55,15 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:38:50,37         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] RevoUninstaller.RevoUninstaller 
+Найдено Revo Uninstaller [RevoUninstaller.RevoUninstaller] Версия 2.7.2
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://revouninstaller.b-cdn.net/ruf272/revosetup.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] RevoUninstaller.RevoUninstaller 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 1 
+  Skipped   : 0 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:39:33,80 
+[BAT_DONE] rc=0 
+============================================================ 
+  winget install session started at 09.10.2026  0:40:54,92         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] Oracle.VirtualBox 
+Найдено Oracle VirtualBox [Oracle.VirtualBox] Версия 7.2.20
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Для этого пакета требуются следующие зависимости:
+  - Пакеты
+      Microsoft.VCRedist.2015+.x64
+(1/1) Найдено Microsoft Visual C++ v14 Redistributable (x64) [Microsoft.VCRedist.2015+.x64] Версия 14.51.36247.0
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://download.visualstudio.microsoft.com/download/pr/ebdab8e5-1d7b-4d9f-a11b-cbb1720c3b12/843068991DAAA1F73AD9F6239BCE4D0F6A07A51F18C37EA2A867E9BECA71295C/VC_redist.x64.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+
+Скачивание https://download.virtualbox.org/virtualbox/7.2.20/VirtualBox-7.2.20-175154-Win.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] Oracle.VirtualBox 
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 1 
+  Skipped   : 0 
+  Failed    : 0 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 09.10.2026  0:43:58,64 
+[BAT_DONE] rc=0 

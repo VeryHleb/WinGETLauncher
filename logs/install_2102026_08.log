@@ -1,0 +1,73 @@
+============================================================ 
+  winget install session started at 08.10.2026  2:01:56,51         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[WARN] Not running as Administrator 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] ﻿7zip.7zip 
+Не найдены пакеты, совпадающие с введенными условиями.
+[WARN] Failed to install ﻿7zip.7zip. Exit code: -1978335212
+[FAIL] ﻿7zip.7zip (exit -1978335212
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 0 
+  Failed    : 1 
+  Failed list: ﻿7zip.7zip 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 08.10.2026  2:01:57,98 
+============================================================ 
+  winget install session started at 08.10.2026  2:05:14,98         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[WARN] Not running as Administrator 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] ﻿Mozilla.Firefox 
+Не найдены пакеты, совпадающие с введенными условиями.
+[WARN] Failed to install ﻿Mozilla.Firefox. Exit code: -1978335212
+[FAIL] ﻿Mozilla.Firefox (exit -1978335212
+[INSTALL] 7zip.7zip 
+Найдено 7-Zip [7zip.7zip] Версия 26.04
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://www.7-zip.org/a/7z2604-x64.msi
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Установщик запросит запуск от имени администратора. Ожидайте запроса.
+Успешно установлено
+[OK] 7zip.7zip 
+=================================================== 
+  SUMMARY 
+  Total     : 2 
+  Installed : 1 
+  Skipped   : 0 
+  Failed    : 2 
+  Failed list: ﻿Mozilla.Firefox 7zip.7zip 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 08.10.2026  2:05:27,31 
+============================================================ 
+  winget install session started at 08.10.2026  2:10:20,22         
+  Repository: E:\YandexDisk\WinGET\source\repositories.tmp.txt                                 
+============================================================ 
+[WARN] Not running as Administrator 
+[INFO] winget version: 
+v1.29.380
+[INSTALL] ﻿7zip.7zip 
+Не найдены пакеты, совпадающие с введенными условиями.
+[WARN] Failed to install ﻿7zip.7zip. Exit code: -1978335212
+[FAIL] ﻿7zip.7zip (exit -1978335212
+=================================================== 
+  SUMMARY 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 0 
+  Failed    : 1 
+  Failed list: ﻿7zip.7zip 
+  Telegram  : 0 
+=================================================== 
+  Session ended at 08.10.2026  2:10:22,06 

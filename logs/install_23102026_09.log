@@ -1,0 +1,57 @@
+============================================================ 
+  install session started at 09.10.2026 23:35:27,17                 
+  Repository: E:\YandexDisk\Wingetlauncher\source\repositories.tmp.txt                                 
+  Manager: winget                                       
+============================================================ 
+[INSTALL] EpicGames.EpicGamesLauncher 
+Найдено Epic Games Launcher [EpicGames.EpicGamesLauncher] Версия 1.3.210.0
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://epicgames-download1.akamaized.net/Builds/UnrealEngineLauncher/Installers/Windows/EpicInstaller-20.3.3.msi?launcherfilename=EpicInstaller-20.3.3.msi
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] EpicGames.EpicGamesLauncher (winget) 
+=================================================== 
+  SUMMARY 
+  Manager   : winget 
+  Total     : 1 
+  Installed : 1 
+  Skipped   : 0 
+  Failed    : 0 
+=================================================== 
+  Session ended at 09.10.2026 23:36:34,77 
+[BAT_DONE] rc=0 
+============================================================ 
+  install session started at 09.10.2026 23:38:19,99                 
+  Repository: E:\YandexDisk\Wingetlauncher для проверки обновлений\WinGETLauncher\source\repositories.tmp.txt                                 
+  Manager: winget                                       
+============================================================ 
+[INSTALL] CPUID.CPU-Z 
+Найдено CPUID CPU-Z [CPUID.CPU-Z] Версия 3.01
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://download.cpuid.com/cpu-z/cpu-z_3.01-en.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] CPUID.CPU-Z (winget) 
+[INSTALL] TechPowerUp.GPU-Z 
+Найдено TechPowerUp GPU-Z [TechPowerUp.GPU-Z] Версия 2.71.0
+Лицензия на это приложение предоставлена вам владельцем.
+Корпорация Майкрософт не несет ответственность за сторонние пакеты и не предоставляет для них никакие лицензии.
+Скачивание https://us1-dl.techpowerup.com/files/GPU-Z.2.71.0.exe
+Хэш установщика успешно проверен
+Запуск установки пакета...
+Успешно установлено
+[OK] TechPowerUp.GPU-Z (winget) 
+=================================================== 
+  SUMMARY 
+  Manager   : winget 
+  Total     : 2 
+  Installed : 2 
+  Skipped   : 0 
+  Failed    : 0 
+=================================================== 
+  Session ended at 09.10.2026 23:39:36,01 
+[BAT_DONE] rc=0 
