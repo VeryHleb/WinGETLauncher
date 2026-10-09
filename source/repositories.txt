@@ -3,26 +3,44 @@
 #  Формат: winget.id|choco.id|Отображаемое имя
 #  Секции: [Имя категории]
 # ============================================================
+#
+#  Источник (winget / msstore) определяется автоматически:
+#   1. Сначала пробуется winget.
+#   2. Если пакета нет в winget — пробуется msstore.
+#
+# ============================================================
 
-[Общение]
+
+# ------------------------------------------------------------
+#  Общение
+# ------------------------------------------------------------
 Discord.Discord|discord|Discord
 Telegram.TelegramDesktop|telegram|Telegram
 Zoom.Zoom|zoom|Zoom
 Slack.Slack|slack|Slack
 
-[Игры]
+
+# ------------------------------------------------------------
+#  Игры
+# ------------------------------------------------------------
 Valve.Steam|steam|Steam
 EpicGames.EpicGamesLauncher|epicgameslauncher|Epic Games Launcher
 GOG.Galaxy|goggalaxy|GOG Galaxy
 
-[Облако и файлы]
+
+# ------------------------------------------------------------
+#  Облако и файлы
+# ------------------------------------------------------------
 Yandex.Disk|yandexdisk|Яндекс.Диск
 RARLab.WinRAR|winrar|WinRAR
 7zip.7zip|7zip|7-Zip
 Dropbox.Dropbox|dropbox|Dropbox
 Google.Drive|googledrive|Google Drive
 
-[Мультимедиа]
+
+# ------------------------------------------------------------
+#  Мультимедиа
+# ------------------------------------------------------------
 VideoLAN.VLC|vlc|VLC media player
 AIMP.AIMP|aimp|AIMP
 Spotify.Spotify|spotify|Spotify
@@ -30,7 +48,10 @@ Audacity.Audacity|audacity|Audacity
 OBSProject.OBSStudio|obs-studio|OBS Studio
 HandBrake.HandBrake|handbrake|HandBrake
 
-[Утилиты]
+
+# ------------------------------------------------------------
+#  Утилиты
+# ------------------------------------------------------------
 Rufus.Rufus|rufus|Rufus
 RevoUninstaller.RevoUninstaller|revo-uninstaller|Revo Uninstaller
 Oracle.VirtualBox|virtualbox|Oracle VirtualBox
@@ -44,27 +65,47 @@ WinSCP.WinSCP|winscp|WinSCP
 PuTTY.PuTTY|putty|PuTTY
 Microsoft.PhoneLink||Связь с телефоном
 
-[Браузеры]
+
+# ------------------------------------------------------------
+#  Браузеры
+# ------------------------------------------------------------
 Mozilla.Firefox|firefox|Firefox
 Google.Chrome|googlechrome|Google Chrome
 Brave.Brave|brave|Brave Browser
 Opera.Opera|opera|Opera
 
-[Безопасность]
+
+# ------------------------------------------------------------
+#  Безопасность
+# ------------------------------------------------------------
 Malwarebytes.Malwarebytes|malwarebytes|Malwarebytes
 KeePassXCTeam.KeePassXC|keepassxc|KeePassXC
 Bitwarden.Bitwarden|bitwarden|Bitwarden
 
-[Разработка]
+
+# ------------------------------------------------------------
+#  Разработка
+# ------------------------------------------------------------
 Git.Git|git|Git
 Microsoft.VisualStudioCode|vscode|Visual Studio Code
 Python.Python.3.12|python|Python 3.12
 Docker.DockerDesktop|docker-desktop|Docker Desktop
 
-[VPN / Proxy]
+
+# ------------------------------------------------------------
+#  VPN / Proxy
+# ------------------------------------------------------------
 Happ.Happ|happ|Happ - Proxy Utility
 
-[Удалённый доступ]
+
+# ------------------------------------------------------------
+#  Удалённый доступ
+# ------------------------------------------------------------
 AnyDesk.AnyDesk|anydesk|AnyDesk
 TeamViewer.TeamViewer|teamviewer|TeamViewer
 RustDesk.RustDesk|rustdesk|RustDesk
+
+
+# ============================================================
+#  Конец списка
+# ============================================================

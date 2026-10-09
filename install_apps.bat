@@ -92,7 +92,7 @@ echo   Installing apps via %PKG_MGR% (from repository)
 echo ===================================================
 echo.
 
-:: Format: winget.id|choco.id|Name|source
+:: Format: winget.id|choco.id|Name
 for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
     set "RAW_LINE=%%L"
 
@@ -104,38 +104,33 @@ for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
         set "APP_ID="
         set "APP_CHOCO="
         set "APP_NAME="
-        set "APP_SOURCE="
 
         echo !RAW_LINE! | findstr /c:"|" >nul
         if !errorLevel! equ 0 (
-            for /f "tokens=1,2,3,4 delims=|" %%A in ("!RAW_LINE!") do (
+            for /f "tokens=1,2,3 delims=|" %%A in ("!RAW_LINE!") do (
                 set "APP_ID=%%A"
                 set "APP_CHOCO=%%B"
                 set "APP_NAME=%%C"
-                set "APP_SOURCE=%%D"
             )
         ) else (
             set "APP_ID=!RAW_LINE!"
         )
 
-        for /f "tokens=* delims= " %%T in ("!APP_ID!")     do set "APP_ID=%%T"
-        for /f "tokens=* delims= " %%T in ("!APP_CHOCO!")  do set "APP_CHOCO=%%T"
-        for /f "tokens=* delims= " %%T in ("!APP_NAME!")   do set "APP_NAME=%%T"
-        for /f "tokens=* delims= " %%T in ("!APP_SOURCE!") do set "APP_SOURCE=%%T"
-
-        if "!APP_SOURCE!"=="" set "APP_SOURCE=winget"
+        for /f "tokens=* delims= " %%T in ("!APP_ID!")    do set "APP_ID=%%T"
+        for /f "tokens=* delims= " %%T in ("!APP_CHOCO!") do set "APP_CHOCO=%%T"
+        for /f "tokens=* delims= " %%T in ("!APP_NAME!")  do set "APP_NAME=%%T"
 
         if not "!APP_ID!"=="" (
             set /a CNT_TOTAL+=1
             echo ---------------------------------------------------
-            echo [INSTALL] !APP_ID!  ^(source: !APP_SOURCE!^)
+            echo [INSTALL] !APP_ID!
             echo ---------------------------------------------------
-            echo [INSTALL] !APP_ID! ^(source: !APP_SOURCE!^) >> "%LOG_FILE%"
+            echo [INSTALL] !APP_ID! >> "%LOG_FILE%"
 
             echo !APP_ID! | findstr /i "telegram" >nul
             if !errorLevel! equ 0 set "TG_FOUND=1"
 
-            call :ProcessOne "!APP_ID!" "!APP_CHOCO!" "!APP_SOURCE!"
+            call :ProcessOne "!APP_ID!" "!APP_CHOCO!"
         )
     )
 )
@@ -145,18 +140,9 @@ goto :after_loop
     setlocal
     set "PKG=%~1"
     set "CHOCO_ID=%~2"
-    set "SRC=%~3"
     set "MGR=%PKG_MGR%"
 
-    if "!SRC!"=="" set "SRC=winget"
-
     if "!MGR!"=="choco" (
-        if "!SRC!"=="msstore" (
-            echo [SKIP] !PKG! ^(msstore not supported on Windows 7^).
-            echo [SKIP] !PKG! ^(msstore not supported^) >> "%LOG_FILE%"
-            endlocal & set /a CNT_SKIP+=1
-            exit /b 0
-        )
         if "!CHOCO_ID!"=="" (
             echo [SKIP] !PKG! ^(no choco.id^).
             echo [SKIP] !PKG! ^(no choco.id^) >> "%LOG_FILE%"
@@ -166,36 +152,12 @@ goto :after_loop
         goto :use_choco
     )
 
-    if "!SRC!"=="msstore" goto :use_msstore
     goto :use_winget
 
-:use_msstore
-    set "FOUND=0"
-    for /f "delims=" %%O in ('winget list --id "!PKG!" --source msstore 2^>nul') do (
-        echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
-        if not errorlevel 1 set "FOUND=1"
-    )
-    if "!FOUND!"=="1" (
-        echo [SKIP] !PKG! already installed ^(msstore^).
-        echo [SKIP] !PKG! ^(msstore^) >> "%LOG_FILE%"
-        endlocal & set /a CNT_SKIP+=1
-        exit /b 0
-    )
-    set "ATTEMPT=0"
-    :retry_ms
-        winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
-        set "WINGET_RC=!errorLevel!"
-        if !WINGET_RC! equ 0 goto :install_ok
-        set /a ATTEMPT+=1
-        if !ATTEMPT! lss 3 (
-            timeout /t 2 /nobreak >nul
-            goto :retry_ms
-        )
-        goto :install_fail
-
 :use_winget
+    :: ---- Проверка: уже установлено? ----
     set "FOUND=0"
-    for /f "delims=" %%O in ('winget list --id "!PKG!" --source winget 2^>nul') do (
+    for /f "delims=" %%O in ('winget list --id "!PKG!" 2^>nul') do (
         echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
         if not errorlevel 1 set "FOUND=1"
     )
@@ -205,17 +167,44 @@ goto :after_loop
         endlocal & set /a CNT_SKIP+=1
         exit /b 0
     )
+
+    :: ---- 1) Попытка через winget ----
     set "ATTEMPT=0"
     :retry_w
         winget install --id "!PKG!" --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
         set "WINGET_RC=!errorLevel!"
         if !WINGET_RC! equ 0 goto :install_ok
         set /a ATTEMPT+=1
-        if !ATTEMPT! lss 3 (
+        if !ATTEMPT! lss 2 (
             timeout /t 2 /nobreak >nul
             goto :retry_w
         )
-        goto :install_fail
+        goto :try_msstore
+
+    :: ---- 2) Fallback: msstore ----
+    :try_msstore
+        echo [INFO] winget failed for !PKG!. Trying msstore...
+        echo [INFO] winget failed, trying msstore >> "%LOG_FILE%"
+
+        winget list --id "!PKG!" --source msstore >nul 2>&1
+        if not errorlevel 1 (
+            echo [SKIP] !PKG! already installed ^(msstore^).
+            echo [SKIP] !PKG! >> "%LOG_FILE%"
+            endlocal & set /a CNT_SKIP+=1
+            exit /b 0
+        )
+
+        set "ATTEMPT=0"
+        :retry_ms
+            winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
+            set "WINGET_RC=!errorLevel!"
+            if !WINGET_RC! equ 0 goto :install_ok
+            set /a ATTEMPT+=1
+            if !ATTEMPT! lss 2 (
+                timeout /t 2 /nobreak >nul
+                goto :retry_ms
+            )
+            goto :install_fail
 
 :use_choco
     set "FOUND=0"
