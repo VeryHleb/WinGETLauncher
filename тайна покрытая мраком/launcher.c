@@ -13,11 +13,7 @@
 // ============================================================
 #define GH_RAW_BASE       L"https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 #define GH_VERSION        GH_RAW_BASE L"version.txt"
-#define GH_INSTALL        GH_RAW_BASE L"install_apps.bat"
-#define GH_REPO_TXT       GH_RAW_BASE L"source/repositories.txt"
-#define GH_INSTALL_WINGET GH_RAW_BASE L"source/install_winget.bat"
-#define GH_SEARCH_BAT     GH_RAW_BASE L"source/search_winget.bat"
-#define GH_SEARCH_PS1     GH_RAW_BASE L"source/search_winget.ps1"
+#define GH_FILES_LIST     GH_RAW_BASE L"source/files.txt"
 
 // ============================================================
 // IDs
@@ -165,25 +161,28 @@ static BOOL GetSearchPs1Path(wchar_t* out, size_t cch) {
     return TRUE;
 }
 
-static BOOL GetSearchBatPathOut(wchar_t* out, size_t cch) {
-    wchar_t dir[MAX_PATH];
-    if (!GetExeDir(dir, MAX_PATH)) return FALSE;
-    _snwprintf(out, cch, L"%ssource\\search_winget.bat", dir);
-    return TRUE;
-}
-
-static BOOL GetInstallWingetPath(wchar_t* out, size_t cch) {
-    wchar_t dir[MAX_PATH];
-    if (!GetExeDir(dir, MAX_PATH)) return FALSE;
-    _snwprintf(out, cch, L"%ssource\\install_winget.bat", dir);
-    return TRUE;
-}
-
 static BOOL GetVersionPath(wchar_t* out, size_t cch) {
     wchar_t dir[MAX_PATH];
     if (!GetExeDir(dir, MAX_PATH)) return FALSE;
     _snwprintf(out, cch, L"%sversion.txt", dir);
     return TRUE;
+}
+
+// ============================================================
+// EnsurePathExists — creates all intermediate folders
+// ============================================================
+static void EnsurePathExists(const wchar_t* fullPath) {
+    wchar_t buf[MAX_PATH];
+    wcsncpy(buf, fullPath, MAX_PATH);
+    buf[MAX_PATH - 1] = L'\0';
+
+    for (wchar_t* p = buf + 1; *p; p++) {
+        if (*p == L'\\') {
+            *p = L'\0';
+            CreateDirectoryW(buf, NULL);
+            *p = L'\\';
+        }
+    }
 }
 
 // ============================================================
@@ -352,13 +351,25 @@ static BOOL WriteLocalVersion(const wchar_t* ver) {
 static DWORD WINAPI UpdateThread(LPVOID param) {
     (void)param;
 
+    FILE* dbg = _wfopen(L"update_debug.log", L"w, ccs=UTF-8");
+    if (dbg) { fwprintf(dbg, L"=== UpdateThread started ===\n"); fclose(dbg); }
+
     wchar_t remoteVer[256] = {0};
     wchar_t localVer[256]  = {0};
 
     if (!ReadLocalVersion(localVer, 256)) wcscpy(localVer, L"(unknown)");
     if (!DownloadToStringW(GH_VERSION, remoteVer, 256)) {
+        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+        if (dbg) { fwprintf(dbg, L"Failed to download version.txt\n"); fclose(dbg); }
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 1, 0);
         return 0;
+    }
+
+    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+    if (dbg) {
+        fwprintf(dbg, L"Local version:  [%ls]\n", localVer);
+        fwprintf(dbg, L"Remote version: [%ls]\n", remoteVer);
+        fclose(dbg);
     }
 
     if (wcscmp(remoteVer, localVer) == 0) {
@@ -381,45 +392,102 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
     wchar_t dir[MAX_PATH];
     GetExeDir(dir, MAX_PATH);
 
-    wchar_t tmpInstall[MAX_PATH], tmpRepo[MAX_PATH];
-    wchar_t tmpWingetBat[MAX_PATH], tmpSearchBat[MAX_PATH], tmpSearchPs1[MAX_PATH];
-    _snwprintf(tmpInstall,   MAX_PATH, L"%sinstall_apps.new.bat",           dir);
-    _snwprintf(tmpRepo,      MAX_PATH, L"%ssource\\repositories.new.txt",   dir);
-    _snwprintf(tmpWingetBat, MAX_PATH, L"%ssource\\install_winget.new.bat", dir);
-    _snwprintf(tmpSearchBat, MAX_PATH, L"%ssource\\search_winget.new.bat",  dir);
-    _snwprintf(tmpSearchPs1, MAX_PATH, L"%ssource\\search_winget.new.ps1",  dir);
+    // Create required folders
+    wchar_t sourceDir[MAX_PATH], exeDir[MAX_PATH];
+    _snwprintf(sourceDir, MAX_PATH, L"%ssource", dir);
+    _snwprintf(exeDir,    MAX_PATH, L"%ssource\\exe", dir);
+    CreateDirectoryW(sourceDir, NULL);
+    CreateDirectoryW(exeDir, NULL);
 
-    BOOL okInstall    = DownloadFileW(GH_INSTALL,        tmpInstall);
-    BOOL okRepo       = DownloadFileW(GH_REPO_TXT,       tmpRepo);
-    BOOL okWingetBat  = DownloadFileW(GH_INSTALL_WINGET, tmpWingetBat);
-    BOOL okSearchBat  = DownloadFileW(GH_SEARCH_BAT,     tmpSearchBat);
-    BOOL okSearchPs1  = DownloadFileW(GH_SEARCH_PS1,     tmpSearchPs1);
+    // Download files list
+    wchar_t tmpFilesList[MAX_PATH];
+    _snwprintf(tmpFilesList, MAX_PATH, L"%ssource_files.tmp.txt", dir);
 
-    if (!okInstall && !okRepo && !okWingetBat && !okSearchBat && !okSearchPs1) {
+    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+    if (dbg) { fwprintf(dbg, L"Downloading files list: %ls\n", GH_FILES_LIST); fclose(dbg); }
+
+    if (!DownloadFileW(GH_FILES_LIST, tmpFilesList)) {
+        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+        if (dbg) { fwprintf(dbg, L"FAILED to download files list\n"); fclose(dbg); }
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
         return 0;
     }
 
-    wchar_t realInstall[MAX_PATH], realRepo[MAX_PATH];
-    wchar_t realWingetBat[MAX_PATH], realSearchBat[MAX_PATH], realSearchPs1[MAX_PATH];
-    GetBatPath(realInstall, MAX_PATH);
-    GetRepoPath(realRepo, MAX_PATH);
-    GetInstallWingetPath(realWingetBat, MAX_PATH);
-    GetSearchBatPathOut(realSearchBat, MAX_PATH);
-    GetSearchPs1Path(realSearchPs1, MAX_PATH);
+    // Read list and download each file
+    FILE* fl = _wfopen(tmpFilesList, L"rb");
+    if (!fl) {
+        DeleteFileW(tmpFilesList);
+        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
+        return 0;
+    }
 
-    #define REPLACE_FILE(ok, tmp, real) \
-        if (ok) { DeleteFileW(real); MoveFileW(tmp, real); }
+    unsigned char bom[3];
+    if (fread(bom, 1, 3, fl) != 3 ||
+        !(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)) {
+        rewind(fl);
+    }
 
-    REPLACE_FILE(okInstall,   tmpInstall,   realInstall);
-    REPLACE_FILE(okRepo,      tmpRepo,      realRepo);
-    REPLACE_FILE(okWingetBat, tmpWingetBat, realWingetBat);
-    REPLACE_FILE(okSearchBat, tmpSearchBat, realSearchBat);
-    REPLACE_FILE(okSearchPs1, tmpSearchPs1, realSearchPs1);
+    int totalDownloaded = 0;
+    int totalFailed = 0;
+    char line[512];
 
+    while (fgets(line, sizeof(line), fl)) {
+        char* p = line;
+        while (*p == ' ' || *p == '\t') p++;
+        char* end = p + strlen(p);
+        while (end > p && (end[-1] == '\r' || end[-1] == '\n' ||
+                          end[-1] == ' ' || end[-1] == '\t')) {
+            *(--end) = '\0';
+        }
+        if (*p == '\0') continue;
+        if (*p == '#') continue;
+
+        wchar_t relPathW[512] = {0};
+        MultiByteToWideChar(CP_UTF8, 0, p, -1, relPathW, 512);
+
+        wchar_t fullUrl[1024];
+        _snwprintf(fullUrl, 1024, L"%ls%ls", GH_RAW_BASE, relPathW);
+
+        // Replace / with \
+        for (wchar_t* q = relPathW; *q; q++) if (*q == L'/') *q = L'\\';
+
+        wchar_t fullPath[MAX_PATH];
+        _snwprintf(fullPath, MAX_PATH, L"%s%s", dir, relPathW);
+
+        EnsurePathExists(fullPath);
+
+        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+        if (dbg) { fwprintf(dbg, L"Downloading: %ls\n  -> %ls\n", fullUrl, fullPath); fclose(dbg); }
+
+        if (DownloadFileW(fullUrl, fullPath)) {
+            totalDownloaded++;
+            dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+            if (dbg) { fwprintf(dbg, L"  OK\n"); fclose(dbg); }
+        } else {
+            totalFailed++;
+            dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+            if (dbg) { fwprintf(dbg, L"  FAILED\n"); fclose(dbg); }
+        }
+    }
+    fclose(fl);
+    DeleteFileW(tmpFilesList);
+
+    // Update local version.txt (no BOM)
     WriteLocalVersion(remoteVer);
 
-    PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 0, 0);
+    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
+    if (dbg) {
+        fwprintf(dbg, L"=== Total: %d ok, %d failed ===\n", totalDownloaded, totalFailed);
+        fclose(dbg);
+    }
+
+    if (totalDownloaded == 0) {
+        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
+    } else if (totalFailed == 0) {
+        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 0, 0);
+    } else {
+        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 5, 0);
+    }
     return 0;
 }
 
@@ -567,7 +635,7 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 }
 
 // ============================================================
-// LoadRepository — категории как обычные строки
+// LoadRepository — categories as plain rows
 // ============================================================
 static void LoadRepository(void) {
     wchar_t repoPath[MAX_PATH];
@@ -595,7 +663,6 @@ static void LoadRepository(void) {
 
     while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256)) != 0) {
         if (rc == 2) {
-            // ---- Категория как строка с префиксом ----
             wchar_t header[300];
             _snwprintf(header, 300, L"── %ls ──", w_name);
 
@@ -606,7 +673,6 @@ static void LoadRepository(void) {
             item.pszText = header;
             int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-            // Пустая колонка 1 — значит это не пакет
             LVITEMW sub = {0};
             sub.mask = LVIF_TEXT;
             sub.iItem = row;
@@ -614,13 +680,11 @@ static void LoadRepository(void) {
             sub.pszText = L"";
             SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
 
-            // Снимаем галочку (чекбокс у категории не нужен)
             ListView_SetCheckState(g_hList, row, FALSE);
             idx++;
             continue;
         }
 
-        // ---- Пакет ----
         const wchar_t* active_id = NULL;
         if (g_PkgMgr == PKG_MGR_WINGET) active_id = w_id;
         else if (g_PkgMgr == PKG_MGR_CHOCO) active_id = w_choco;
@@ -660,8 +724,7 @@ static int GetCheckedCount(void) {
     for (int i = 0; i < count; i++) {
         wchar_t idbuf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;  // категория
-
+        if (idbuf[0] == L'\0') continue;
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
@@ -675,8 +738,7 @@ static BOOL WriteTmpRepo(const wchar_t* path) {
     for (int i = 0; i < count; i++) {
         wchar_t buf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, buf, 256);
-        if (buf[0] == L'\0') continue;  // категория
-
+        if (buf[0] == L'\0') continue;
         if (!ListView_GetCheckState(g_hList, i)) continue;
 
         char utf8[1024];
@@ -836,7 +898,7 @@ static void SetAllCheckState(BOOL state) {
     for (int i = 0; i < count; i++) {
         wchar_t idbuf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;  // категория
+        if (idbuf[0] == L'\0') continue;
         ListView_SetCheckState(g_hList, i, state);
     }
 }
@@ -1319,6 +1381,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         case 4:
             SetStatus(L"Ошибка загрузки");
             MessageBoxW(g_hWnd, L"Не удалось скачать обновление.", L"Ошибка", MB_ICONERROR);
+            break;
+        case 5:
+            SetStatus(L"Обновление частично применено");
+            MessageBoxW(g_hWnd,
+                L"Часть файлов не удалось скачать.\n"
+                L"Смотрите update_debug.log рядом с launcher.exe.",
+                L"Обновление", MB_ICONWARNING);
             break;
         }
         return 0;
