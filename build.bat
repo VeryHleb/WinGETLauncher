@@ -18,12 +18,8 @@ if %errorLevel% neq 0 (
 
 echo [INFO] Compiling launcher.c ...
 gcc launcher.c resource.res -o launcher.exe ^
-    -mwindows ^
-    -municode ^
-    -O2 ^
-    -s ^
-    -static ^
-    -lcomctl32 -luser32 -lgdi32 -lshell32 -lmsimg32
+    -mwindows -municode -O2 -s -static ^
+    -lcomctl32 -luser32 -lgdi32 -lshell32 -lmsimg32 -lwininet
 if %errorLevel% neq 0 (
     echo [ERROR] gcc failed.
     pause
