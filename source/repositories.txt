@@ -42,6 +42,7 @@ Piriform.CCleaner|ccleaner|CCleaner
 Wireshark.Wireshark|wireshark|Wireshark
 WinSCP.WinSCP|winscp|WinSCP
 PuTTY.PuTTY|putty|PuTTY
+Microsoft.PhoneLink||Связь с телефоном
 
 [Браузеры]
 Mozilla.Firefox|firefox|Firefox
