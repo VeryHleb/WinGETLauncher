@@ -653,7 +653,7 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 }
 
 // ============================================================
-// LoadRepository — 4 columns: Name (vis), ID (hidden), Choco (hidden), Source (hidden)
+// LoadRepository
 // ============================================================
 static void LoadRepository(void) {
     wchar_t repoPath[MAX_PATH];
@@ -681,7 +681,7 @@ static void LoadRepository(void) {
 
     while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256, w_source, 128)) != 0) {
         if (rc == 2) {
-            // Category as plain row
+            // Category row
             wchar_t header[300];
             _snwprintf(header, 300, L"── %ls ──", w_name);
 
@@ -692,7 +692,6 @@ static void LoadRepository(void) {
             item.pszText = header;
             int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-            // Empty ID = category
             LVITEMW sub1 = {0};
             sub1.mask = LVIF_TEXT;
             sub1.iItem = row; sub1.iSubItem = 1;
@@ -723,7 +722,6 @@ static void LoadRepository(void) {
 
         if (!active_id || active_id[0] == L'\0') { skipped++; continue; }
 
-        // Row
         LVITEMW item = {0};
         item.mask = LVIF_TEXT;
         item.iItem = idx;
@@ -771,13 +769,13 @@ static int GetCheckedCount(void) {
     for (int i = 0; i < count; i++) {
         wchar_t idbuf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;  // category
+        if (idbuf[0] == L'\0') continue;
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
 }
 
-// Write repositories.tmp.txt with 4 columns: winget.id|choco.id|Name|source
+// Write .tmp.txt with 4 columns: winget.id|choco.id|Name|source
 static BOOL WriteTmpRepo(const wchar_t* path) {
     FILE* f = _wfopen(path, L"wb");
     if (!f) return FALSE;
