@@ -11,10 +11,13 @@
 // ============================================================
 // GitHub update source
 // ============================================================
-#define GH_RAW_BASE   L"https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
-#define GH_VERSION    GH_RAW_BASE L"version.txt"
-#define GH_INSTALL    GH_RAW_BASE L"install_apps.bat"
-#define GH_REPO_TXT   GH_RAW_BASE L"repositories.txt"
+#define GH_RAW_BASE       L"https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
+#define GH_VERSION        GH_RAW_BASE L"version.txt"
+#define GH_INSTALL        GH_RAW_BASE L"install_apps.bat"
+#define GH_REPO_TXT       GH_RAW_BASE L"source/repositories.txt"
+#define GH_INSTALL_WINGET GH_RAW_BASE L"source/install_winget.bat"
+#define GH_SEARCH_BAT     GH_RAW_BASE L"source/search_winget.bat"
+#define GH_SEARCH_PS1     GH_RAW_BASE L"source/search_winget.ps1"
 
 // ============================================================
 // IDs
@@ -89,13 +92,6 @@ static HBRUSH g_hBkgBrush = NULL;
 static PkgMgrType g_PkgMgr = PKG_MGR_NONE;
 static wchar_t    g_OSName[128] = L"";
 
-// Group tracking: индексы строк-заголовков категорий
-#define MAX_GROUPS 64
-static int  g_GroupRows[MAX_GROUPS];
-static wchar_t g_GroupNames[MAX_GROUPS][128];
-static int  g_GroupCount = 0;
-
-// Search window
 static HWND g_hSearchWnd    = NULL;
 static HWND g_hSearchEdit   = NULL;
 static HWND g_hSearchList   = NULL;
@@ -162,10 +158,24 @@ static BOOL GetTmpRepoPath(wchar_t* out, size_t cch) {
     return TRUE;
 }
 
-static BOOL GetSearchBatPath(wchar_t* out, size_t cch) {
+static BOOL GetSearchPs1Path(wchar_t* out, size_t cch) {
     wchar_t dir[MAX_PATH];
     if (!GetExeDir(dir, MAX_PATH)) return FALSE;
     _snwprintf(out, cch, L"%ssource\\search_winget.ps1", dir);
+    return TRUE;
+}
+
+static BOOL GetSearchBatPathOut(wchar_t* out, size_t cch) {
+    wchar_t dir[MAX_PATH];
+    if (!GetExeDir(dir, MAX_PATH)) return FALSE;
+    _snwprintf(out, cch, L"%ssource\\search_winget.bat", dir);
+    return TRUE;
+}
+
+static BOOL GetInstallWingetPath(wchar_t* out, size_t cch) {
+    wchar_t dir[MAX_PATH];
+    if (!GetExeDir(dir, MAX_PATH)) return FALSE;
+    _snwprintf(out, cch, L"%ssource\\install_winget.bat", dir);
     return TRUE;
 }
 
@@ -254,7 +264,6 @@ static BOOL DownloadToStringW(const wchar_t* url, wchar_t* out, size_t outCch) {
     }
     accum[pos] = '\0';
 
-    // Пропустить BOM
     unsigned char* ub = (unsigned char*)accum;
     if (pos >= 3 && ub[0] == 0xEF && ub[1] == 0xBB && ub[2] == 0xBF) {
         memmove(accum, accum + 3, pos - 3 + 1);
@@ -285,18 +294,24 @@ static BOOL ReadLocalVersion(wchar_t* out, size_t cch) {
     FILE* f = _wfopen(path, L"rb");
     if (!f) return FALSE;
 
-    unsigned char bom[3] = {0};
-    size_t got = fread(bom, 1, 3, f);
-    if (!(got == 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)) {
-        rewind(f);
-    }
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (fsize <= 0 || fsize > 4096) { fclose(f); return FALSE; }
 
-    char line[512] = {0};
-    if (!fgets(line, sizeof(line), f)) { fclose(f); return FALSE; }
+    char raw[4096] = {0};
+    fread(raw, 1, fsize, f);
     fclose(f);
 
-    char* p = line;
-    while (*p == ' ' || *p == '\t') p++;
+    char* p = raw;
+    if (fsize >= 3 &&
+        (unsigned char)p[0] == 0xEF &&
+        (unsigned char)p[1] == 0xBB &&
+        (unsigned char)p[2] == 0xBF) {
+        p += 3;
+    }
+
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
     char* end = p + strlen(p);
     while (end > p && (end[-1] == '\r' || end[-1] == '\n' ||
                       end[-1] == ' '  || end[-1] == '\t')) {
@@ -304,9 +319,31 @@ static BOOL ReadLocalVersion(wchar_t* out, size_t cch) {
     }
     if (*p == '\0') return FALSE;
 
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, p, -1, out, (int)cch);
-    if (wlen <= 0) wlen = MultiByteToWideChar(CP_ACP, 0, p, -1, out, (int)cch);
-    return wlen > 0;
+    int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, p, -1, NULL, 0);
+    if (wlen > 0) {
+        MultiByteToWideChar(CP_UTF8, 0, p, -1, out, (int)cch);
+    } else {
+        MultiByteToWideChar(CP_ACP, 0, p, -1, out, (int)cch);
+    }
+    return TRUE;
+}
+
+// Write version.txt WITHOUT BOM
+static BOOL WriteLocalVersion(const wchar_t* ver) {
+    wchar_t path[MAX_PATH];
+    if (!GetVersionPath(path, MAX_PATH)) return FALSE;
+
+    FILE* f = _wfopen(path, L"wb");
+    if (!f) return FALSE;
+
+    char utf8[1024] = {0};
+    int len = WideCharToMultiByte(CP_UTF8, 0, ver, -1, utf8, 1024, NULL, NULL);
+    if (len > 1) {
+        fwrite(utf8, 1, len - 1, f);
+        fwrite("\n", 1, 1, f);
+    }
+    fclose(f);
+    return TRUE;
 }
 
 // ============================================================
@@ -345,28 +382,42 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
     GetExeDir(dir, MAX_PATH);
 
     wchar_t tmpInstall[MAX_PATH], tmpRepo[MAX_PATH];
-    _snwprintf(tmpInstall, MAX_PATH, L"%sinstall_apps.new.bat", dir);
-    _snwprintf(tmpRepo,    MAX_PATH, L"%srepositories.new.txt", dir);
+    wchar_t tmpWingetBat[MAX_PATH], tmpSearchBat[MAX_PATH], tmpSearchPs1[MAX_PATH];
+    _snwprintf(tmpInstall,   MAX_PATH, L"%sinstall_apps.new.bat",           dir);
+    _snwprintf(tmpRepo,      MAX_PATH, L"%ssource\\repositories.new.txt",   dir);
+    _snwprintf(tmpWingetBat, MAX_PATH, L"%ssource\\install_winget.new.bat", dir);
+    _snwprintf(tmpSearchBat, MAX_PATH, L"%ssource\\search_winget.new.bat",  dir);
+    _snwprintf(tmpSearchPs1, MAX_PATH, L"%ssource\\search_winget.new.ps1",  dir);
 
-    BOOL okInstall = DownloadFileW(GH_INSTALL, tmpInstall);
-    BOOL okRepo    = DownloadFileW(GH_REPO_TXT, tmpRepo);
+    BOOL okInstall    = DownloadFileW(GH_INSTALL,        tmpInstall);
+    BOOL okRepo       = DownloadFileW(GH_REPO_TXT,       tmpRepo);
+    BOOL okWingetBat  = DownloadFileW(GH_INSTALL_WINGET, tmpWingetBat);
+    BOOL okSearchBat  = DownloadFileW(GH_SEARCH_BAT,     tmpSearchBat);
+    BOOL okSearchPs1  = DownloadFileW(GH_SEARCH_PS1,     tmpSearchPs1);
 
-    if (!okInstall && !okRepo) {
+    if (!okInstall && !okRepo && !okWingetBat && !okSearchBat && !okSearchPs1) {
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
         return 0;
     }
 
     wchar_t realInstall[MAX_PATH], realRepo[MAX_PATH];
+    wchar_t realWingetBat[MAX_PATH], realSearchBat[MAX_PATH], realSearchPs1[MAX_PATH];
     GetBatPath(realInstall, MAX_PATH);
     GetRepoPath(realRepo, MAX_PATH);
+    GetInstallWingetPath(realWingetBat, MAX_PATH);
+    GetSearchBatPathOut(realSearchBat, MAX_PATH);
+    GetSearchPs1Path(realSearchPs1, MAX_PATH);
 
-    if (okInstall) { DeleteFileW(realInstall); MoveFileW(tmpInstall, realInstall); }
-    if (okRepo)    { DeleteFileW(realRepo);    MoveFileW(tmpRepo, realRepo); }
+    #define REPLACE_FILE(ok, tmp, real) \
+        if (ok) { DeleteFileW(real); MoveFileW(tmp, real); }
 
-    wchar_t verPath[MAX_PATH];
-    GetVersionPath(verPath, MAX_PATH);
-    FILE* fv = _wfopen(verPath, L"w, ccs=UTF-8");
-    if (fv) { fwprintf(fv, L"%ls\n", remoteVer); fclose(fv); }
+    REPLACE_FILE(okInstall,   tmpInstall,   realInstall);
+    REPLACE_FILE(okRepo,      tmpRepo,      realRepo);
+    REPLACE_FILE(okWingetBat, tmpWingetBat, realWingetBat);
+    REPLACE_FILE(okSearchBat, tmpSearchBat, realSearchBat);
+    REPLACE_FILE(okSearchPs1, tmpSearchPs1, realSearchPs1);
+
+    WriteLocalVersion(remoteVer);
 
     PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 0, 0);
     return 0;
@@ -428,7 +479,7 @@ static void AppendOutputA(const char* text) {
 }
 
 // ============================================================
-// Repository parser: winget.id|choco.id|Name ; [Category]
+// Repository parser
 // Returns: 1 = package, 2 = category, 0 = EOF
 // ============================================================
 static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
@@ -448,7 +499,6 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
         if (*p == '\0') continue;
         if (*p == '#') continue;
 
-        // Category
         if (*p == '[') {
             char* close = strchr(p, ']');
             if (close) {
@@ -467,7 +517,6 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
             continue;
         }
 
-        // Package
         char* part1 = p;
         char* part2 = NULL;
         char* part3 = NULL;
@@ -518,7 +567,7 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 }
 
 // ============================================================
-// LoadRepository — с LVS_EX_GROUPS
+// LoadRepository — категории как обычные строки
 // ============================================================
 static void LoadRepository(void) {
     wchar_t repoPath[MAX_PATH];
@@ -538,43 +587,40 @@ static void LoadRepository(void) {
     }
 
     SendMessageW(g_hList, LVM_DELETEALLITEMS, 0, 0);
-    SendMessageW(g_hList, LVM_REMOVEALLGROUPS, 0, 0);
-
-    g_GroupCount = 0;
 
     wchar_t w_id[256], w_choco[256], w_name[256];
-    wchar_t current_cat[128] = L"Приложения";
-    int current_group_id = -1;
     int idx = 0;
     int skipped = 0;
-
     int rc;
+
     while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256)) != 0) {
         if (rc == 2) {
-            // Category → создать группу ListView
-            wcsncpy(current_cat, w_name, 128);
-            current_cat[127] = L'\0';
+            // ---- Категория как строка с префиксом ----
+            wchar_t header[300];
+            _snwprintf(header, 300, L"── %ls ──", w_name);
 
-            if (g_GroupCount < MAX_GROUPS) {
-                LVGROUP lvg = {0};
-                lvg.cbSize = sizeof(lvg);
-                lvg.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_STATE;
-                lvg.pszHeader = current_cat;
-                lvg.iGroupId = g_GroupCount;
-                lvg.state = LVGS_NORMAL;
-                lvg.stateMask = LVGS_NORMAL | LVGS_COLLAPSIBLE;
+            LVITEMW item = {0};
+            item.mask = LVIF_TEXT;
+            item.iItem = idx;
+            item.iSubItem = 0;
+            item.pszText = header;
+            int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-                LRESULT gid = SendMessageW(g_hList, LVM_INSERTGROUP, -1, (LPARAM)&lvg);
-                current_group_id = (int)gid;
+            // Пустая колонка 1 — значит это не пакет
+            LVITEMW sub = {0};
+            sub.mask = LVIF_TEXT;
+            sub.iItem = row;
+            sub.iSubItem = 1;
+            sub.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
 
-                g_GroupRows[g_GroupCount] = current_group_id;
-                wcsncpy(g_GroupNames[g_GroupCount], current_cat, 128);
-                g_GroupCount++;
-            }
+            // Снимаем галочку (чекбокс у категории не нужен)
+            ListView_SetCheckState(g_hList, row, FALSE);
+            idx++;
             continue;
         }
 
-        // Package
+        // ---- Пакет ----
         const wchar_t* active_id = NULL;
         if (g_PkgMgr == PKG_MGR_WINGET) active_id = w_id;
         else if (g_PkgMgr == PKG_MGR_CHOCO) active_id = w_choco;
@@ -595,15 +641,6 @@ static void LoadRepository(void) {
         sub.pszText = (LPWSTR)active_id;
         SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
 
-        // Привязать к группе
-        if (current_group_id >= 0) {
-            LVITEMW grpAssign = {0};
-            grpAssign.mask = LVIF_GROUPID;
-            grpAssign.iItem = row;
-            grpAssign.iGroupId = current_group_id;
-            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&grpAssign);
-        }
-
         ListView_SetCheckState(g_hList, row, TRUE);
         idx++;
     }
@@ -611,15 +648,9 @@ static void LoadRepository(void) {
 
     wchar_t status[256];
     const wchar_t* mgr = (g_PkgMgr == PKG_MGR_WINGET) ? L"winget" : L"choco";
-    if (skipped > 0) {
-        _snwprintf(status, 256,
-                   L"Загружено %d приложений в %d группах (пропущено %d — нет для %ls)",
-                   idx, g_GroupCount, skipped, mgr);
-    } else {
-        _snwprintf(status, 256,
-                   L"Загружено %d приложений в %d группах (менеджер: %ls)",
-                   idx, g_GroupCount, mgr);
-    }
+    _snwprintf(status, 256,
+               L"Загружено %d строк (менеджер: %ls, пропущено %d)",
+               idx, mgr, skipped);
     SetStatus(status);
 }
 
@@ -627,6 +658,10 @@ static int GetCheckedCount(void) {
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     int checked = 0;
     for (int i = 0; i < count; i++) {
+        wchar_t idbuf[256] = {0};
+        ListView_GetItemText(g_hList, i, 1, idbuf, 256);
+        if (idbuf[0] == L'\0') continue;  // категория
+
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
@@ -638,11 +673,11 @@ static BOOL WriteTmpRepo(const wchar_t* path) {
 
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
-        if (!ListView_GetCheckState(g_hList, i)) continue;
-
         wchar_t buf[256] = {0};
         ListView_GetItemText(g_hList, i, 1, buf, 256);
-        if (buf[0] == L'\0') continue;
+        if (buf[0] == L'\0') continue;  // категория
+
+        if (!ListView_GetCheckState(g_hList, i)) continue;
 
         char utf8[1024];
         int len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, 1024, NULL, NULL);
@@ -799,6 +834,9 @@ static void OnOpenRepoClicked(void) {
 static void SetAllCheckState(BOOL state) {
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
+        wchar_t idbuf[256] = {0};
+        ListView_GetItemText(g_hList, i, 1, idbuf, 256);
+        if (idbuf[0] == L'\0') continue;  // категория
         ListView_SetCheckState(g_hList, i, state);
     }
 }
@@ -815,9 +853,9 @@ static DWORD WINAPI SearchThread(LPVOID param) {
     GetWindowTextW(g_hSearchEdit, query, 256);
     if (!*query) { PostMessageW(g_hSearchWnd, WM_APP_SEARCH_DONE, 0, 0); return 0; }
 
-    wchar_t batPath[MAX_PATH];
-    if (!GetSearchBatPath(batPath, MAX_PATH)) { PostMessageW(g_hSearchWnd, WM_APP_SEARCH_DONE, 0, 0); return 0; }
-    if (GetFileAttributesW(batPath) == INVALID_FILE_ATTRIBUTES) {
+    wchar_t ps1Path[MAX_PATH];
+    if (!GetSearchPs1Path(ps1Path, MAX_PATH)) { PostMessageW(g_hSearchWnd, WM_APP_SEARCH_DONE, 0, 0); return 0; }
+    if (GetFileAttributesW(ps1Path) == INVALID_FILE_ATTRIBUTES) {
         MessageBoxW(g_hSearchWnd, L"Файл search_winget.ps1 не найден в source\\",
                     L"Ошибка", MB_ICONERROR);
         PostMessageW(g_hSearchWnd, WM_APP_SEARCH_DONE, 0, 0);
@@ -827,7 +865,7 @@ static DWORD WINAPI SearchThread(LPVOID param) {
     wchar_t cmdLine[MAX_PATH * 4];
     _snwprintf(cmdLine, MAX_PATH * 4,
                L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%s\" -Query \"%s\"",
-               batPath, query);
+               ps1Path, query);
 
     SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
     HANDLE hRead = NULL, hWrite = NULL;
@@ -1146,9 +1184,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         ListView_SetExtendedListViewStyle(g_hList,
             LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-
-// Включаем группы (современный способ)
-SendMessageW(g_hList, LVM_ENABLEGROUPVIEW, TRUE, 0);
 
         LVCOLUMNW col0 = {0};
         col0.mask = LVCF_TEXT | LVCF_WIDTH;
