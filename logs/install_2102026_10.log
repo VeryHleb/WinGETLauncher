@@ -1,0 +1,21 @@
+ 
+============================================================ 
+  install session started at 10.10.2026  2:55:53,91                 
+  Repository: E:\Desctop\Wingetlauncher\WinGETLauncher\source\repositories.tmp.txt                                 
+  Manager: winget                                       
+============================================================ 
+[INSTALL] Microsoft.PhoneLink||Связь с телефоном|winget 
+Не найдены пакеты, совпадающие с введенными условиями.
+Не найдены пакеты, совпадающие с введенными условиями.
+[INFO] winget failed, trying msstore 
+[SKIP] Microsoft.PhoneLink||Связь с телефоном|winget 
+=================================================== 
+  SUMMARY 
+  Manager   : winget 
+  Total     : 1 
+  Installed : 0 
+  Skipped   : 1 
+  Failed    : 0 
+=================================================== 
+  Session ended at 10.10.2026  2:55:58,84 
+[BAT_DONE] rc=0 
