@@ -155,7 +155,7 @@ goto :after_loop
     goto :use_winget
 
 :use_winget
-    :: ---- Проверка: уже установлено? ----
+    :: ---- Check installed (by output, not errorlevel) ----
     set "FOUND=0"
     for /f "delims=" %%O in ('winget list --id "!PKG!" 2^>nul') do (
         echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
@@ -168,7 +168,7 @@ goto :after_loop
         exit /b 0
     )
 
-    :: ---- 1) Попытка через winget ----
+    :: ---- 1) Try winget ----
     set "ATTEMPT=0"
     :retry_w
         winget install --id "!PKG!" --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
@@ -186,8 +186,12 @@ goto :after_loop
         echo [INFO] winget failed for !PKG!. Trying msstore...
         echo [INFO] winget failed, trying msstore >> "%LOG_FILE%"
 
-        winget list --id "!PKG!" --source msstore >nul 2>&1
-        if not errorlevel 1 (
+        set "FOUND=0"
+        for /f "delims=" %%O in ('winget list --id "!PKG!" --source msstore 2^>nul') do (
+            echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
+            if not errorlevel 1 set "FOUND=1"
+        )
+        if "!FOUND!"=="1" (
             echo [SKIP] !PKG! already installed ^(msstore^).
             echo [SKIP] !PKG! >> "%LOG_FILE%"
             endlocal & set /a CNT_SKIP+=1
