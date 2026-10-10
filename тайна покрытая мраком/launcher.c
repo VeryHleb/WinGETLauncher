@@ -169,7 +169,7 @@ static BOOL GetVersionPath(wchar_t* out, size_t cch) {
 }
 
 // ============================================================
-// EnsurePathExists — creates all intermediate folders
+// EnsurePathExists
 // ============================================================
 static void EnsurePathExists(const wchar_t* fullPath) {
     wchar_t buf[MAX_PATH];
@@ -327,7 +327,6 @@ static BOOL ReadLocalVersion(wchar_t* out, size_t cch) {
     return TRUE;
 }
 
-// Write version.txt WITHOUT BOM
 static BOOL WriteLocalVersion(const wchar_t* ver) {
     wchar_t path[MAX_PATH];
     if (!GetVersionPath(path, MAX_PATH)) return FALSE;
@@ -359,17 +358,8 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
 
     if (!ReadLocalVersion(localVer, 256)) wcscpy(localVer, L"(unknown)");
     if (!DownloadToStringW(GH_VERSION, remoteVer, 256)) {
-        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-        if (dbg) { fwprintf(dbg, L"Failed to download version.txt\n"); fclose(dbg); }
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 1, 0);
         return 0;
-    }
-
-    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-    if (dbg) {
-        fwprintf(dbg, L"Local version:  [%ls]\n", localVer);
-        fwprintf(dbg, L"Remote version: [%ls]\n", remoteVer);
-        fclose(dbg);
     }
 
     if (wcscmp(remoteVer, localVer) == 0) {
@@ -392,28 +382,20 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
     wchar_t dir[MAX_PATH];
     GetExeDir(dir, MAX_PATH);
 
-    // Create required folders
     wchar_t sourceDir[MAX_PATH], exeDir[MAX_PATH];
     _snwprintf(sourceDir, MAX_PATH, L"%ssource", dir);
     _snwprintf(exeDir,    MAX_PATH, L"%ssource\\exe", dir);
     CreateDirectoryW(sourceDir, NULL);
     CreateDirectoryW(exeDir, NULL);
 
-    // Download files list
     wchar_t tmpFilesList[MAX_PATH];
     _snwprintf(tmpFilesList, MAX_PATH, L"%ssource_files.tmp.txt", dir);
 
-    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-    if (dbg) { fwprintf(dbg, L"Downloading files list: %ls\n", GH_FILES_LIST); fclose(dbg); }
-
     if (!DownloadFileW(GH_FILES_LIST, tmpFilesList)) {
-        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-        if (dbg) { fwprintf(dbg, L"FAILED to download files list\n"); fclose(dbg); }
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
         return 0;
     }
 
-    // Read list and download each file
     FILE* fl = _wfopen(tmpFilesList, L"rb");
     if (!fl) {
         DeleteFileW(tmpFilesList);
@@ -448,7 +430,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         wchar_t fullUrl[1024];
         _snwprintf(fullUrl, 1024, L"%ls%ls", GH_RAW_BASE, relPathW);
 
-        // Replace / with \
         for (wchar_t* q = relPathW; *q; q++) if (*q == L'/') *q = L'\\';
 
         wchar_t fullPath[MAX_PATH];
@@ -456,30 +437,16 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
 
         EnsurePathExists(fullPath);
 
-        dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-        if (dbg) { fwprintf(dbg, L"Downloading: %ls\n  -> %ls\n", fullUrl, fullPath); fclose(dbg); }
-
         if (DownloadFileW(fullUrl, fullPath)) {
             totalDownloaded++;
-            dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-            if (dbg) { fwprintf(dbg, L"  OK\n"); fclose(dbg); }
         } else {
             totalFailed++;
-            dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-            if (dbg) { fwprintf(dbg, L"  FAILED\n"); fclose(dbg); }
         }
     }
     fclose(fl);
     DeleteFileW(tmpFilesList);
 
-    // Update local version.txt (no BOM)
     WriteLocalVersion(remoteVer);
-
-    dbg = _wfopen(L"update_debug.log", L"a, ccs=UTF-8");
-    if (dbg) {
-        fwprintf(dbg, L"=== Total: %d ok, %d failed ===\n", totalDownloaded, totalFailed);
-        fclose(dbg);
-    }
 
     if (totalDownloaded == 0) {
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
@@ -547,7 +514,7 @@ static void AppendOutputA(const char* text) {
 }
 
 // ============================================================
-// Repository parser
+// Repository parser: winget.id|choco.id|Name|source
 // Returns: 1 = package, 2 = category, 0 = EOF
 // ============================================================
 static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
@@ -588,12 +555,21 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
         char* part1 = p;
         char* part2 = NULL;
         char* part3 = NULL;
+        // part4 = source — нам не нужен, просто отбрасываем
+
         char* bar1 = strchr(p, '|');
         if (bar1) {
             *bar1 = '\0';
             part2 = bar1 + 1;
             char* bar2 = strchr(part2, '|');
-            if (bar2) { *bar2 = '\0'; part3 = bar2 + 1; }
+            if (bar2) {
+                *bar2 = '\0';
+                part3 = bar2 + 1;
+                char* bar3 = strchr(part3, '|');
+                if (bar3) {
+                    *bar3 = '\0';   // обрезаем по третьему |
+                }
+            }
         }
 
         #define TRIM(s) do { \
@@ -635,7 +611,7 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 }
 
 // ============================================================
-// LoadRepository — categories as plain rows
+// LoadRepository
 // ============================================================
 static void LoadRepository(void) {
     wchar_t repoPath[MAX_PATH];
@@ -673,23 +649,25 @@ static void LoadRepository(void) {
             item.pszText = header;
             int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-            LVITEMW sub = {0};
-            sub.mask = LVIF_TEXT;
-            sub.iItem = row;
-            sub.iSubItem = 1;
-            sub.pszText = L"";
-            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
+            LVITEMW sub1 = {0};
+            sub1.mask = LVIF_TEXT;
+            sub1.iItem = row; sub1.iSubItem = 1;
+            sub1.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
+
+            LVITEMW sub2 = {0};
+            sub2.mask = LVIF_TEXT;
+            sub2.iItem = row; sub2.iSubItem = 2;
+            sub2.pszText = L"";
+            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
 
             ListView_SetCheckState(g_hList, row, FALSE);
             idx++;
             continue;
         }
 
-        const wchar_t* active_id = NULL;
-        if (g_PkgMgr == PKG_MGR_WINGET) active_id = w_id;
-        else if (g_PkgMgr == PKG_MGR_CHOCO) active_id = w_choco;
-
-        if (!active_id || active_id[0] == L'\0') { skipped++; continue; }
+        // Пропускаем, если ни winget.id, ни choco.id не заполнены
+        if ((!w_id[0]) && (!w_choco[0])) { skipped++; continue; }
 
         LVITEMW item = {0};
         item.mask = LVIF_TEXT;
@@ -698,12 +676,19 @@ static void LoadRepository(void) {
         item.pszText = w_name;
         int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-        LVITEMW sub = {0};
-        sub.mask = LVIF_TEXT;
-        sub.iItem = row;
-        sub.iSubItem = 1;
-        sub.pszText = (LPWSTR)active_id;
-        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub);
+        // Колонка 1: winget.id
+        LVITEMW sub1 = {0};
+        sub1.mask = LVIF_TEXT;
+        sub1.iItem = row; sub1.iSubItem = 1;
+        sub1.pszText = w_id;
+        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
+
+        // Колонка 2: choco.id
+        LVITEMW sub2 = {0};
+        sub2.mask = LVIF_TEXT;
+        sub2.iItem = row; sub2.iSubItem = 2;
+        sub2.pszText = w_choco;
+        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
 
         ListView_SetCheckState(g_hList, row, TRUE);
         idx++;
@@ -722,31 +707,48 @@ static int GetCheckedCount(void) {
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     int checked = 0;
     for (int i = 0; i < count; i++) {
-        wchar_t idbuf[256] = {0};
-        ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;
+        wchar_t wid[256] = {0};
+        wchar_t wchoco[256] = {0};
+        ListView_GetItemText(g_hList, i, 1, wid, 256);
+        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
+        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
 }
 
+// Write .tmp.txt with 3 columns: winget.id|choco.id|Name
 static BOOL WriteTmpRepo(const wchar_t* path) {
     FILE* f = _wfopen(path, L"wb");
     if (!f) return FALSE;
 
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
-        wchar_t buf[256] = {0};
-        ListView_GetItemText(g_hList, i, 1, buf, 256);
-        if (buf[0] == L'\0') continue;
         if (!ListView_GetCheckState(g_hList, i)) continue;
 
-        char utf8[1024];
-        int len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, 1024, NULL, NULL);
-        if (len > 1) {
-            fwrite(utf8, 1, len - 1, f);
-            fwrite("\n", 1, 1, f);
-        }
+        wchar_t wname[256]  = {0};
+        wchar_t wid[256]    = {0};
+        wchar_t wchoco[256] = {0};
+
+        ListView_GetItemText(g_hList, i, 0, wname,  256);
+        ListView_GetItemText(g_hList, i, 1, wid,    256);
+        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
+
+        // Пропускаем категории
+        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
+
+        char utf8_wid[1024];
+        char utf8_choco[1024];
+        char utf8_name[1024];
+
+        WideCharToMultiByte(CP_UTF8, 0, wid,    -1, utf8_wid,   1024, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wchoco, -1, utf8_choco, 1024, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, wname,  -1, utf8_name,  1024, NULL, NULL);
+
+        char line[4096];
+        _snprintf(line, sizeof(line), "%s|%s|%s\n",
+                  utf8_wid, utf8_choco, utf8_name);
+        fwrite(line, 1, strlen(line), f);
     }
     fclose(f);
     return TRUE;
@@ -896,9 +898,11 @@ static void OnOpenRepoClicked(void) {
 static void SetAllCheckState(BOOL state) {
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
-        wchar_t idbuf[256] = {0};
-        ListView_GetItemText(g_hList, i, 1, idbuf, 256);
-        if (idbuf[0] == L'\0') continue;
+        wchar_t wid[256] = {0};
+        wchar_t wchoco[256] = {0};
+        ListView_GetItemText(g_hList, i, 1, wid, 256);
+        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
+        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
         ListView_SetCheckState(g_hList, i, state);
     }
 }
@@ -1247,15 +1251,23 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         ListView_SetExtendedListViewStyle(g_hList,
             LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
+        // Колонка 0: Name (видимая)
         LVCOLUMNW col0 = {0};
         col0.mask = LVCF_TEXT | LVCF_WIDTH;
         col0.pszText = L"Программа"; col0.cx = 300;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 0, (LPARAM)&col0);
 
+        // Колонка 1: winget.id (скрытая)
         LVCOLUMNW col1 = {0};
         col1.mask = LVCF_TEXT | LVCF_WIDTH;
         col1.pszText = L"ID"; col1.cx = 0;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 1, (LPARAM)&col1);
+
+        // Колонка 2: choco.id (скрытая)
+        LVCOLUMNW col2 = {0};
+        col2.mask = LVCF_TEXT | LVCF_WIDTH;
+        col2.pszText = L"Choco"; col2.cx = 0;
+        SendMessageW(g_hList, LVM_INSERTCOLUMNW, 2, (LPARAM)&col2);
 
         SendMessageW(g_hList, WM_SETFONT, (WPARAM)g_hFont, TRUE);
 
