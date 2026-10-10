@@ -2,7 +2,7 @@
 
 [![Platform](https://img.shields.io/badge/platform-Windows%207%20%7C%208%20%7C%2010%20%7C%2011-blue)]()
 [![Language](https://img.shields.io/badge/language-C%20%2B%20Batch-green)]()
-[![Version](https://img.shields.io/badge/version-1.2-orange)]()
+[![Version](https://img.shields.io/badge/version-1.2.7 alpha win7-orange)]()
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)]()
 
 GUI-лаунчер для пакетной установки программ через **winget** (Windows 10/11)
