@@ -105,17 +105,15 @@ for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
         set "APP_CHOCO="
         set "APP_NAME="
 
-        echo !RAW_LINE! | findstr /c:"|" >nul
-        if !errorLevel! equ 0 (
-            for /f "tokens=1,2,3 delims=|" %%A in ("!RAW_LINE!") do (
-                set "APP_ID=%%A"
-                set "APP_CHOCO=%%B"
-                set "APP_NAME=%%C"
-            )
-        ) else (
-            set "APP_ID=!RAW_LINE!"
+        :: Split by | into up to 3 parts. No findstr, no errorlevel.
+        for /f "tokens=1,2,3 delims=|" %%A in ("!RAW_LINE!") do (
+            set "APP_ID=%%A"
+            set "APP_CHOCO=%%B"
+            set "APP_NAME=%%C"
         )
+        if "!APP_ID!"=="" set "APP_ID=!RAW_LINE!"
 
+        :: Trim spaces
         for /f "tokens=* delims= " %%T in ("!APP_ID!")    do set "APP_ID=%%T"
         for /f "tokens=* delims= " %%T in ("!APP_CHOCO!") do set "APP_CHOCO=%%T"
         for /f "tokens=* delims= " %%T in ("!APP_NAME!")  do set "APP_NAME=%%T"
