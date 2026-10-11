@@ -105,6 +105,10 @@ AnyDesk.AnyDesk|anydesk|AnyDesk
 TeamViewer.TeamViewer|teamviewer|TeamViewer
 RustDesk.RustDesk|rustdesk|RustDesk
 
+# ------------------------------------------------------------
+#  Download manager
+# ------------------------------------------------------------
+BitTorrentLimited.uTorrentWeb|utorrent-web|utorrent-web
 
 # ============================================================
 #  Конец списка
