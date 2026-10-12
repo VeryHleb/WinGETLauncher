@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <wininet.h>
+#include <winternl.h>   // <-- добавлено для RTL_OSVERSIONINFOW
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,11 @@
 #define GH_RAW_BASE       L"https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 #define GH_VERSION        GH_RAW_BASE L"version.txt"
 #define GH_FILES_LIST     GH_RAW_BASE L"source/files.txt"
+
+// ============================================================
+// Minimum supported Windows version
+// ============================================================
+#define WIN10_22H2_BUILD 19045
 
 // ============================================================
 // IDs
@@ -186,19 +192,50 @@ static void EnsurePathExists(const wchar_t* fullPath) {
 }
 
 // ============================================================
-// Detect OS
+// Real Windows version via RtlGetVersion
+// ============================================================
+typedef NTSTATUS (WINAPI *pRtlGetVersion)(PRTL_OSVERSIONINFOW);
+
+static BOOL GetRealOSVersion(RTL_OSVERSIONINFOW* out) {
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    if (!hNtdll) return FALSE;
+    pRtlGetVersion fn = (pRtlGetVersion)GetProcAddress(hNtdll, "RtlGetVersion");
+    if (!fn) return FALSE;
+    out->dwOSVersionInfoSize = sizeof(*out);
+    return fn(out) == 0; // STATUS_SUCCESS
+}
+
+// ============================================================
+// Minimum supported: Windows 10 22H2 (build 19045)
+// ============================================================
+static BOOL IsWindowsSupported(RTL_OSVERSIONINFOW* outVer) {
+    RTL_OSVERSIONINFOW osvi = {0};
+    if (!GetRealOSVersion(&osvi)) {
+        if (outVer) *outVer = osvi;
+        return FALSE;
+    }
+    if (outVer) *outVer = osvi;
+
+    if (osvi.dwMajorVersion < 10) return FALSE;
+    if (osvi.dwMajorVersion == 10 && osvi.dwBuildNumber < WIN10_22H2_BUILD) return FALSE;
+    return TRUE;
+}
+
+// ============================================================
+// Detect OS (обновлённая версия)
 // ============================================================
 static void DetectOS(void) {
-    OSVERSIONINFOW osvi = {0};
-    osvi.dwOSVersionInfoSize = sizeof(osvi);
-
-    if (GetVersionExW(&osvi)) {
+    RTL_OSVERSIONINFOW osvi = {0};
+    if (GetRealOSVersion(&osvi)) {
         _snwprintf(g_OSName, 128, L"Windows %lu.%lu (build %lu)",
                    osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
     } else {
         wcscpy(g_OSName, L"Windows (unknown)");
     }
 
+    // winget доступен на Windows 10 1809+ (build 17763+)
+    // Но минимальная поддерживаемая версия лаунчера — 22H2 (19045),
+    // поэтому здесь всегда будет winget на поддерживаемых системах.
     if (osvi.dwMajorVersion >= 10 && osvi.dwBuildNumber >= 17763) {
         g_PkgMgr = PKG_MGR_WINGET;
     } else {
@@ -1425,6 +1462,24 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
     INITCOMMONCONTROLSEX icc = { sizeof(icc),
         ICC_LISTVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icc);
+
+    // ---- Проверка минимальной версии Windows ----
+    RTL_OSVERSIONINFOW osvi = {0};
+    if (!IsWindowsSupported(&osvi)) {
+        wchar_t msg[512];
+        _snwprintf(msg, 512,
+            L"Минимальная поддерживаемая версия Windows — Windows 10 22H2 "
+            L"(сборка %d).\n\n"
+            L"Ваша версия: %lu.%lu (сборка %lu)\n\n"
+            L"Лаунчер будет закрыт.",
+            WIN10_22H2_BUILD,
+            osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
+
+        MessageBoxW(NULL, msg, L"Неподдерживаемая версия Windows",
+                    MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    // ---------------------------------------------
 
     DetectOS();
 
