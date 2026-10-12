@@ -7,6 +7,7 @@
 # --- Основные скрипты ---
 install_apps.bat
 version.txt
+launcher.exe
 
 # --- Папка source ---
 source/repositories.txt
