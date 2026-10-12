@@ -387,9 +387,6 @@ static BOOL WriteLocalVersion(const wchar_t* ver) {
 static DWORD WINAPI UpdateThread(LPVOID param) {
     (void)param;
 
-    FILE* dbg = _wfopen(L"update_debug.log", L"w, ccs=UTF-8");
-    if (dbg) { fwprintf(dbg, L"=== UpdateThread started ===\n"); fclose(dbg); }
-
     wchar_t remoteVer[256] = {0};
     wchar_t localVer[256]  = {0};
 
@@ -406,8 +403,12 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
 
     wchar_t msg[512];
     _snwprintf(msg, 512,
-        L"Доступна новая версия!\n\nТекущая: %ls\nНовая:   %ls\n\n"
-        L"Скачать обновление файлов скриптов?",
+        L"Доступна новая версия!\n\n"
+        L"Текущая: %ls\n"
+        L"Новая:   %ls\n\n"
+        L"Лаунчер будет закрыт, а обновление продолжит\n"
+        L"отдельный скрипт update.bat.\n\n"
+        L"Продолжить?",
         localVer, remoteVer);
 
     if (MessageBoxW(g_hWnd, msg, L"Обновление",
@@ -416,82 +417,49 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         return 0;
     }
 
+    // ---- Находим update.bat рядом с launcher.exe ----
     wchar_t dir[MAX_PATH];
-    GetExeDir(dir, MAX_PATH);
-
-    wchar_t sourceDir[MAX_PATH], exeDir[MAX_PATH];
-    _snwprintf(sourceDir, MAX_PATH, L"%ssource", dir);
-    _snwprintf(exeDir,    MAX_PATH, L"%ssource\\exe", dir);
-    CreateDirectoryW(sourceDir, NULL);
-    CreateDirectoryW(exeDir, NULL);
-
-    wchar_t tmpFilesList[MAX_PATH];
-    _snwprintf(tmpFilesList, MAX_PATH, L"%ssource_files.tmp.txt", dir);
-
-    if (!DownloadFileW(GH_FILES_LIST, tmpFilesList)) {
+    if (!GetExeDir(dir, MAX_PATH)) {
+        MessageBoxW(g_hWnd, L"Не удалось определить путь к лаунчеру.",
+                    L"Ошибка", MB_ICONERROR);
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
         return 0;
     }
 
-    FILE* fl = _wfopen(tmpFilesList, L"rb");
-    if (!fl) {
-        DeleteFileW(tmpFilesList);
+    wchar_t batPath[MAX_PATH];
+    _snwprintf(batPath, MAX_PATH, L"%supdate.bat", dir);
+
+    if (GetFileAttributesW(batPath) == INVALID_FILE_ATTRIBUTES) {
+        wchar_t emsg[512];
+        _snwprintf(emsg, 512,
+            L"Файл update.bat не найден:\n%ls\n\n"
+            L"Скачайте его из репозитория и положите рядом с launcher.exe.",
+            batPath);
+        MessageBoxW(g_hWnd, emsg, L"Ошибка", MB_ICONERROR);
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
         return 0;
     }
 
-    unsigned char bom[3];
-    if (fread(bom, 1, 3, fl) != 3 ||
-        !(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)) {
-        rewind(fl);
-    }
+    // ---- Запускаем update.bat отдельным процессом ----
+    SHELLEXECUTEINFOW sei = {0};
+    sei.cbSize       = sizeof(sei);
+    sei.fMask        = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+    sei.lpVerb       = L"open";
+    sei.lpFile       = batPath;
+    sei.lpDirectory  = dir;
+    sei.nShow        = SW_SHOWNORMAL;
 
-    int totalDownloaded = 0;
-    int totalFailed = 0;
-    char line[512];
-
-    while (fgets(line, sizeof(line), fl)) {
-        char* p = line;
-        while (*p == ' ' || *p == '\t') p++;
-        char* end = p + strlen(p);
-        while (end > p && (end[-1] == '\r' || end[-1] == '\n' ||
-                          end[-1] == ' ' || end[-1] == '\t')) {
-            *(--end) = '\0';
-        }
-        if (*p == '\0') continue;
-        if (*p == '#') continue;
-
-        wchar_t relPathW[512] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, p, -1, relPathW, 512);
-
-        wchar_t fullUrl[1024];
-        _snwprintf(fullUrl, 1024, L"%ls%ls", GH_RAW_BASE, relPathW);
-
-        for (wchar_t* q = relPathW; *q; q++) if (*q == L'/') *q = L'\\';
-
-        wchar_t fullPath[MAX_PATH];
-        _snwprintf(fullPath, MAX_PATH, L"%s%s", dir, relPathW);
-
-        EnsurePathExists(fullPath);
-
-        if (DownloadFileW(fullUrl, fullPath)) {
-            totalDownloaded++;
-        } else {
-            totalFailed++;
-        }
-    }
-    fclose(fl);
-    DeleteFileW(tmpFilesList);
-
-    WriteLocalVersion(remoteVer);
-
-    if (totalDownloaded == 0) {
+    if (!ShellExecuteExW(&sei)) {
+        MessageBoxW(g_hWnd, L"Не удалось запустить update.bat.",
+                    L"Ошибка", MB_ICONERROR);
         PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 4, 0);
-    } else if (totalFailed == 0) {
-        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 0, 0);
-    } else {
-        PostMessageW(g_hWnd, WM_APP_UPDATE_DONE, 5, 0);
+        return 0;
     }
+
+    if (sei.hProcess) CloseHandle(sei.hProcess);
+
+    // ---- Закрываем лаунчер: update.bat сам дождётся ----
+    PostMessageW(g_hWnd, WM_CLOSE, 0, 0);
     return 0;
 }
 
@@ -1416,31 +1384,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
 
     case WM_APP_UPDATE_DONE: {
-        InterlockedExchange(&g_UpdateRunning, 0);
-        switch (wParam) {
-        case 0:
-            SetStatus(L"Обновление установлено");
-            MessageBoxW(g_hWnd,
-                L"Файлы обновлены!\nПерезапустите лаунчер, чтобы применить изменения.",
-                L"Обновление", MB_ICONINFORMATION);
-            break;
-        case 1: SetStatus(L"Не удалось проверить обновления"); break;
-        case 2: SetStatus(L"У вас последняя версия"); break;
-        case 3: SetStatus(L"Обновление отменено"); break;
-        case 4:
-            SetStatus(L"Ошибка загрузки");
-            MessageBoxW(g_hWnd, L"Не удалось скачать обновление.", L"Ошибка", MB_ICONERROR);
-            break;
-        case 5:
-            SetStatus(L"Обновление частично применено");
-            MessageBoxW(g_hWnd,
-                L"Часть файлов не удалось скачать.\n"
-                L"Смотрите update_debug.log рядом с launcher.exe.",
-                L"Обновление", MB_ICONWARNING);
-            break;
-        }
-        return 0;
+    InterlockedExchange(&g_UpdateRunning, 0);
+    switch (wParam) {
+    case 1: SetStatus(L"Не удалось проверить обновления"); break;
+    case 2: SetStatus(L"У вас последняя версия"); break;
+    case 3: SetStatus(L"Обновление отменено"); break;
+    case 4: SetStatus(L"Ошибка запуска обновления"); break;
     }
+    return 0;
+}
 
     case WM_DESTROY: {
         if (g_hFont)     DeleteObject(g_hFont);
