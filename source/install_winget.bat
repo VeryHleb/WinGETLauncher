@@ -1,22 +1,23 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
-title Установка App Installer (winget) и зависимостей
+title ╨г╤Б╤В╨░╨╜╨╛╨▓╨║╨░ App Installer (winget) ╨╕ ╨╖╨░╨▓╨╕╤Б╨╕╨╝╨╛╤Б╤В╨╡╨╣
 
-:: Проверка прав администратора
+:: ╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╨┐╤А╨░╨▓ ╨░╨┤╨╝╨╕╨╜╨╕╤Б╤В╤А╨░╤В╨╛╤А╨░
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ОШИБКА] Запустите этот скрипт от имени Администратора!
+    echo [╨Ю╨и╨Ш╨С╨Ъ╨Р] ╨Ч╨░╨┐╤Г╤Б╤В╨╕╤В╨╡ ╤Н╤В╨╛╤В ╤Б╨║╤А╨╕╨┐╤В ╨╛╤В ╨╕╨╝╨╡╨╜╨╕ ╨Р╨┤╨╝╨╕╨╜╨╕╤Б╤В╤А╨░╤В╨╛╤А╨░!
     pause
     exit /b
 )
 
 cd /d "%~dp0"
 echo ===================================================
-echo   Установка App Installer (winget)
+echo   ╨г╤Б╤В╨░╨╜╨╛╨▓╨║╨░ App Installer (winget)
 echo ===================================================
 echo.
 
-:: Функция установки одного пакета APPX/MSIX/MSIXBUNDLE
+:: ╨д╤Г╨╜╨║╤Ж╨╕╤П ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ ╨╛╨┤╨╜╨╛╨│╨╛ ╨┐╨░╨║╨╡╤В╨░ APPX/MSIX/MSIXBUNDLE
 set "PS_CMD=Add-AppxPackage -Path"
 
 echo [1/5] VCLibs 140.00 (MSIX)...
@@ -46,15 +47,15 @@ for %%f in (Microsoft.DesktopAppInstaller_*.msixbundle Microsoft.DesktopAppInsta
 
 echo.
 echo ===================================================
-echo   Проверка установки winget
+echo   ╨Я╤А╨╛╨▓╨╡╤А╨║╨░ ╤Г╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ winget
 echo ===================================================
 where winget >nul 2>&1
 if %errorLevel% equ 0 (
-    echo [OK] winget успешно установлен!
+    echo [OK] winget ╤Г╤Б╨┐╨╡╤И╨╜╨╛ ╤Г╤Б╤В╨░╨╜╨╛╨▓╨╗╨╡╨╜!
     winget --version
 ) else (
-    echo [ВНИМАНИЕ] winget не найден в PATH. 
-    echo Попробуйте перезайти в систему или запустить:
+    echo [╨Т╨Э╨Ш╨Ь╨Р╨Э╨Ш╨Х] winget ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜ ╨▓ PATH. 
+    echo ╨Я╨╛╨┐╤А╨╛╨▒╤Г╨╣╤В╨╡ ╨┐╨╡╤А╨╡╨╖╨░╨╣╤В╨╕ ╨▓ ╤Б╨╕╤Б╤В╨╡╨╝╤Г ╨╕╨╗╨╕ ╨╖╨░╨┐╤Г╤Б╤В╨╕╤В╤М:
     echo   winget --version
 )
 echo.
