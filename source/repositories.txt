@@ -1,0 +1,115 @@
+# ============================================================
+#  WinGET Launcher — Repository
+#  Формат: winget.id|Отображаемое имя
+#  Секции: [Имя категории]
+# ============================================================
+#
+#  Источник (winget / msstore) определяется автоматически:
+#   1. Сначала пробуется winget.
+#   2. Если пакета нет в winget — пробуется msstore.
+#
+# ============================================================
+
+
+# ------------------------------------------------------------
+#  Общение
+# ------------------------------------------------------------
+Discord.Discord|Discord
+Telegram.TelegramDesktop|Telegram
+Zoom.Zoom|Zoom
+Slack.Slack|Slack
+
+
+# ------------------------------------------------------------
+#  Игры
+# ------------------------------------------------------------
+Valve.Steam|Steam
+EpicGames.EpicGamesLauncher|Epic Games Launcher
+GOG.Galaxy|GOG Galaxy
+
+
+# ------------------------------------------------------------
+#  Облако и файлы
+# ------------------------------------------------------------
+Yandex.Disk|Яндекс.Диск
+RARLab.WinRAR|WinRAR
+7zip.7zip|7-Zip
+Dropbox.Dropbox|Dropbox
+Google.Drive|Google Drive
+
+
+# ------------------------------------------------------------
+#  Мультимедиа
+# ------------------------------------------------------------
+VideoLAN.VLC|VLC media player
+AIMP.AIMP|AIMP
+Spotify.Spotify|Spotify
+Audacity.Audacity|Audacity
+OBSProject.OBSStudio|OBS Studio
+HandBrake.HandBrake|HandBrake
+
+
+# ------------------------------------------------------------
+#  Утилиты
+# ------------------------------------------------------------
+Rufus.Rufus|Rufus
+RevoUninstaller.RevoUninstaller|Revo Uninstaller
+Oracle.VirtualBox|Oracle VirtualBox
+Ghisler.TotalCommander|Total Commander
+Notepad++.Notepad++|Notepad++
+CPUID.CPU-Z|CPU-Z
+TechPowerUp.GPU-Z|GPU-Z
+Piriform.CCleaner|CCleaner
+Wireshark.Wireshark|Wireshark
+WinSCP.WinSCP|WinSCP
+PuTTY.PuTTY|PuTTY
+9NMPJ99VJBWV|Связь с телефоном
+
+
+# ------------------------------------------------------------
+#  Браузеры
+# ------------------------------------------------------------
+Mozilla.Firefox|Firefox
+Google.Chrome|Google Chrome
+Brave.Brave|Brave Browser
+Opera.Opera|Opera
+
+
+# ------------------------------------------------------------
+#  Безопасность
+# ------------------------------------------------------------
+Malwarebytes.Malwarebytes|Malwarebytes
+KeePassXCTeam.KeePassXC|KeePassXC
+Bitwarden.Bitwarden|Bitwarden
+
+
+# ------------------------------------------------------------
+#  Разработка
+# ------------------------------------------------------------
+Git.Git|Git
+Microsoft.VisualStudioCode|Visual Studio Code
+Python.Python.3.12|Python 3.12
+Docker.DockerDesktop|Docker Desktop
+
+
+# ------------------------------------------------------------
+#  VPN / Proxy
+# ------------------------------------------------------------
+Happ.Happ|Happ - Proxy Utility
+
+
+# ------------------------------------------------------------
+#  Удалённый доступ
+# ------------------------------------------------------------
+AnyDesk.AnyDesk|AnyDesk
+TeamViewer.TeamViewer|TeamViewer
+RustDesk.RustDesk|RustDesk
+
+# ------------------------------------------------------------
+#  Download manager
+# ------------------------------------------------------------
+BitTorrentLimited.uTorrentWeb|uTorrent Web
+
+# ============================================================
+#  Конец списка
+# ============================================================
