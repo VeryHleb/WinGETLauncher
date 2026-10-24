@@ -5,12 +5,10 @@ setlocal enabledelayedexpansion
 
 set "ROOT=%~dp0"
 set "SOURCE_DIR=%ROOT%source"
-set "WINGET_INSTALLER=%SOURCE_DIR%\install_winget.bat"
 set "EXE_DIR=%SOURCE_DIR%\exe"
 set "LOG_DIR=%ROOT%logs"
 
 if not defined REPO_FILE set "REPO_FILE=%SOURCE_DIR%\repositories.txt"
-if not defined PKG_MGR set "PKG_MGR=winget"
 
 set "TG_DIR=%ProgramFiles%\TgWsProxy"
 set "TG_EXE=%TG_DIR%\TgWsProxy_windows_7_64bit.exe"
@@ -18,32 +16,25 @@ set "TG_SRC=%EXE_DIR%\TgWsProxy_windows_7_64bit.exe"
 set "TG_TASK=TgWsProxy"
 
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-
-:: Auto-cleanup logs older than 30 days (BEFORE creating new one)
 forfiles /p "%LOG_DIR%" /m install_*.log /d -30 /c "cmd /c del @path" >nul 2>&1
 
-:: Build log file name
 for /f "tokens=1-4 delims=/:. " %%a in ("%date% %time%") do set "STAMP=%%d%%b%%c_%%a"
 if "%STAMP%"=="" set "STAMP=%RANDOM%"
 set "LOG_FILE=%LOG_DIR%\install_%STAMP%.log"
 
-:: Create log file immediately
 echo. > "%LOG_FILE%"
 
 echo [INFO] Log file: %LOG_FILE%
 echo [INFO] Repository: %REPO_FILE%
-echo [INFO] Package manager: %PKG_MGR%
 echo ============================================================ >> "%LOG_FILE%"
 echo   install session started at %date% %time%                 >> "%LOG_FILE%"
 echo   Repository: %REPO_FILE%                                 >> "%LOG_FILE%"
-echo   Manager: %PKG_MGR%                                       >> "%LOG_FILE%"
+echo   Manager: winget                                          >> "%LOG_FILE%"
 echo ============================================================ >> "%LOG_FILE%"
 
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo [WARN] Not running as Administrator.
-    echo [WARN] Some installations may fail.
-    echo.
     echo [WARN] Not running as Administrator >> "%LOG_FILE%"
 )
 
@@ -55,29 +46,26 @@ if not exist "%REPO_FILE%" (
     exit /b 2
 )
 
-if "%PKG_MGR%"=="winget" (
-    where winget >nul 2>&1
-    if !errorLevel! neq 0 (
-        echo [WARN] winget not found. Falling back to Chocolatey.
-        set "PKG_MGR=choco"
-    )
+:: ============================================================
+:: Проверка winget и инициализация msstore
+:: ============================================================
+where winget >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [ERROR] winget not found. Install App Installer first.
+    echo [ERROR] winget not found >> "%LOG_FILE%"
+    echo [BAT_DONE] rc=2
+    if not defined REPO_FILE pause
+    exit /b 2
 )
 
-if "%PKG_MGR%"=="choco" (
-    where choco >nul 2>&1
-    if !errorLevel! neq 0 (
-        echo [INFO] Installing Chocolatey...
-        powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-          "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))" >> "%LOG_FILE%" 2>&1
-        set "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
-        where choco >nul 2>&1
-        if !errorLevel! neq 0 (
-            echo [ERROR] Failed to install Chocolatey.
-            echo [BAT_DONE] rc=2
-            if not defined REPO_FILE pause
-            exit /b 2
-        )
-    )
+echo [INFO] Initializing msstore source...
+echo [INFO] Initializing msstore source... >> "%LOG_FILE%"
+winget source update --accept-source-agreements --disable-interactivity >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [WARN] msstore init failed, trying reset...
+    echo [WARN] msstore init failed, trying reset... >> "%LOG_FILE%"
+    winget source reset --force --accept-source-agreements >nul 2>&1
+    winget source update --accept-source-agreements --disable-interactivity >nul 2>&1
 )
 
 set /a CNT_OK=0
@@ -88,11 +76,11 @@ set "FAILED_LIST="
 set "TG_FOUND=0"
 
 echo ===================================================
-echo   Installing apps via %PKG_MGR% (from repository)
+echo   Installing apps via winget (from repository)
 echo ===================================================
 echo.
 
-:: Format: winget.id|choco.id|Name
+:: Format: winget.id|Name
 for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
     set "RAW_LINE=%%L"
 
@@ -102,20 +90,15 @@ for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
 
     if not "!RAW_LINE!"=="" (
         set "APP_ID="
-        set "APP_CHOCO="
         set "APP_NAME="
 
-        :: Split by | into up to 3 parts. No findstr, no errorlevel.
-        for /f "tokens=1,2,3 delims=|" %%A in ("!RAW_LINE!") do (
+        for /f "tokens=1,2 delims=|" %%A in ("!RAW_LINE!") do (
             set "APP_ID=%%A"
-            set "APP_CHOCO=%%B"
-            set "APP_NAME=%%C"
+            set "APP_NAME=%%B"
         )
         if "!APP_ID!"=="" set "APP_ID=!RAW_LINE!"
 
-        :: Trim spaces
         for /f "tokens=* delims= " %%T in ("!APP_ID!")    do set "APP_ID=%%T"
-        for /f "tokens=* delims= " %%T in ("!APP_CHOCO!") do set "APP_CHOCO=%%T"
         for /f "tokens=* delims= " %%T in ("!APP_NAME!")  do set "APP_NAME=%%T"
 
         if not "!APP_ID!"=="" (
@@ -128,7 +111,7 @@ for /f "usebackq tokens=* eol=#" %%L in ("%REPO_FILE%") do (
             echo !APP_ID! | findstr /i "telegram" >nul
             if !errorLevel! equ 0 set "TG_FOUND=1"
 
-            call :ProcessOne "!APP_ID!" "!APP_CHOCO!"
+            call :ProcessOne "!APP_ID!" "!APP_NAME!"
         )
     )
 )
@@ -137,23 +120,9 @@ goto :after_loop
 :ProcessOne
     setlocal
     set "PKG=%~1"
-    set "CHOCO_ID=%~2"
-    set "MGR=%PKG_MGR%"
+    set "NAME=%~2"
 
-    if "!MGR!"=="choco" (
-        if "!CHOCO_ID!"=="" (
-            echo [SKIP] !PKG! ^(no choco.id^).
-            echo [SKIP] !PKG! ^(no choco.id^) >> "%LOG_FILE%"
-            endlocal & set /a CNT_SKIP+=1
-            exit /b 0
-        )
-        goto :use_choco
-    )
-
-    goto :use_winget
-
-:use_winget
-    :: ---- Check installed (by output, not errorlevel) ----
+    :: ---- Check installed ----
     set "FOUND=0"
     for /f "delims=" %%O in ('winget list --id "!PKG!" 2^>nul') do (
         echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
@@ -167,70 +136,33 @@ goto :after_loop
     )
 
     :: ---- 1) Try winget ----
-    set "ATTEMPT=0"
-    :retry_w
-        winget install --id "!PKG!" --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
-        set "WINGET_RC=!errorLevel!"
-        if !WINGET_RC! equ 0 goto :install_ok
-        set /a ATTEMPT+=1
-        if !ATTEMPT! lss 2 (
-            ping -n 3 127.0.0.1 >nul
-            goto :retry_w
-        )
-        goto :try_msstore
+    winget install --id "!PKG!" --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
+    if !errorLevel! equ 0 goto :install_ok
 
-    :: ---- 2) Fallback: msstore ----
-    :try_msstore
-        echo [INFO] winget failed for !PKG!. Trying msstore...
-        echo [INFO] winget failed, trying msstore >> "%LOG_FILE%"
-
-        set "FOUND=0"
-        for /f "delims=" %%O in ('winget list --id "!PKG!" --source msstore 2^>nul') do (
-            echo %%O | findstr /i /c:"!PKG!" >nul 2>&1
-            if not errorlevel 1 set "FOUND=1"
-        )
-        if "!FOUND!"=="1" (
-            echo [SKIP] !PKG! already installed ^(msstore^).
-            echo [SKIP] !PKG! >> "%LOG_FILE%"
-            endlocal & set /a CNT_SKIP+=1
-            exit /b 0
-        )
-
-        set "ATTEMPT=0"
-        :retry_ms
-            winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
-            set "WINGET_RC=!errorLevel!"
-            if !WINGET_RC! equ 0 goto :install_ok
-            set /a ATTEMPT+=1
-            if !ATTEMPT! lss 2 (
-                timeout /t 2 /nobreak >nul
-                goto :retry_ms
-            )
-            goto :install_fail
-
-:use_choco
-    set "FOUND=0"
-    for /f "delims=" %%O in ('choco list --local-only "!CHOCO_ID!" 2^>nul') do (
-        echo %%O | findstr /i /c:"!CHOCO_ID!" >nul 2>&1
-        if not errorlevel 1 set "FOUND=1"
-    )
-    if "!FOUND!"=="1" (
-        echo [SKIP] !CHOCO_ID! already installed ^(choco^).
-        echo [SKIP] !CHOCO_ID! ^(choco^) >> "%LOG_FILE%"
+    winget list --id "!PKG!" --source winget >nul 2>&1
+    if !errorLevel! equ 0 (
+        echo [SKIP] !PKG! already installed ^(winget, verified^).
+        echo [SKIP] !PKG! >> "%LOG_FILE%"
         endlocal & set /a CNT_SKIP+=1
         exit /b 0
     )
-    set "ATTEMPT=0"
-    :retry_c
-        choco install "!CHOCO_ID!" -y --no-progress >> "%LOG_FILE%" 2>&1
-        set "CHOCO_RC=!errorLevel!"
-        if !CHOCO_RC! equ 0 goto :install_ok
-        set /a ATTEMPT+=1
-        if !ATTEMPT! lss 3 (
-            ping -n 4 127.0.0.1 >nul
-            goto :retry_c
-        )
-        goto :install_fail
+
+    :: ---- 2) Fallback: msstore ----
+    echo [INFO] winget failed for !PKG!. Trying msstore...
+    echo [INFO] winget failed, trying msstore >> "%LOG_FILE%"
+
+    winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
+    if !errorLevel! equ 0 goto :install_ok
+
+    winget list --id "!PKG!" --source msstore >nul 2>&1
+    if !errorLevel! equ 0 (
+        echo [SKIP] !PKG! already installed ^(msstore, verified^).
+        echo [SKIP] !PKG! >> "%LOG_FILE%"
+        endlocal & set /a CNT_SKIP+=1
+        exit /b 0
+    )
+
+    goto :install_fail
 
 :install_ok
     echo [OK] !PKG! installed.
@@ -249,7 +181,6 @@ goto :after_loop
 echo ===================================================
 echo   SUMMARY
 echo ===================================================
-echo   Manager   : %PKG_MGR%
 echo   Total     : %CNT_TOTAL%
 echo   Installed : %CNT_OK%
 echo   Skipped   : %CNT_SKIP%
@@ -261,7 +192,6 @@ echo.
 
 echo =================================================== >> "%LOG_FILE%"
 echo   SUMMARY >> "%LOG_FILE%"
-echo   Manager   : %PKG_MGR% >> "%LOG_FILE%"
 echo   Total     : %CNT_TOTAL% >> "%LOG_FILE%"
 echo   Installed : %CNT_OK% >> "%LOG_FILE%"
 echo   Skipped   : %CNT_SKIP% >> "%LOG_FILE%"

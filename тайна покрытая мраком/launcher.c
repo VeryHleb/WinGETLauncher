@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <wininet.h>
-#include <winternl.h>   // <-- добавлено для RTL_OSVERSIONINFOW
+#include <winternl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +14,6 @@
 // ============================================================
 #define GH_RAW_BASE       L"https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 #define GH_VERSION        GH_RAW_BASE L"version.txt"
-#define GH_FILES_LIST     GH_RAW_BASE L"source/files.txt"
 
 // ============================================================
 // Minimum supported Windows version
@@ -47,15 +46,6 @@
 
 #define WM_APP_SEARCH_DONE (WM_APP + 1)
 #define WM_APP_UPDATE_DONE (WM_APP + 2)
-
-// ============================================================
-// Package manager
-// ============================================================
-typedef enum {
-    PKG_MGR_NONE   = 0,
-    PKG_MGR_WINGET = 1,
-    PKG_MGR_CHOCO  = 2
-} PkgMgrType;
 
 // ============================================================
 // Globals
@@ -91,8 +81,7 @@ static HFONT  g_hFont     = NULL;
 static HFONT  g_hFontBold = NULL;
 static HBRUSH g_hBkgBrush = NULL;
 
-static PkgMgrType g_PkgMgr = PKG_MGR_NONE;
-static wchar_t    g_OSName[128] = L"";
+static wchar_t g_OSName[128] = L"";
 
 static HWND g_hSearchWnd    = NULL;
 static HWND g_hSearchEdit   = NULL;
@@ -205,9 +194,6 @@ static BOOL GetRealOSVersion(RTL_OSVERSIONINFOW* out) {
     return fn(out) == 0; // STATUS_SUCCESS
 }
 
-// ============================================================
-// Minimum supported: Windows 10 22H2 (build 19045)
-// ============================================================
 static BOOL IsWindowsSupported(RTL_OSVERSIONINFOW* outVer) {
     RTL_OSVERSIONINFOW osvi = {0};
     if (!GetRealOSVersion(&osvi)) {
@@ -221,9 +207,6 @@ static BOOL IsWindowsSupported(RTL_OSVERSIONINFOW* outVer) {
     return TRUE;
 }
 
-// ============================================================
-// Detect OS (обновлённая версия)
-// ============================================================
 static void DetectOS(void) {
     RTL_OSVERSIONINFOW osvi = {0};
     if (GetRealOSVersion(&osvi)) {
@@ -231,15 +214,6 @@ static void DetectOS(void) {
                    osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
     } else {
         wcscpy(g_OSName, L"Windows (unknown)");
-    }
-
-    // winget доступен на Windows 10 1809+ (build 17763+)
-    // Но минимальная поддерживаемая версия лаунчера — 22H2 (19045),
-    // поэтому здесь всегда будет winget на поддерживаемых системах.
-    if (osvi.dwMajorVersion >= 10 && osvi.dwBuildNumber >= 17763) {
-        g_PkgMgr = PKG_MGR_WINGET;
-    } else {
-        g_PkgMgr = PKG_MGR_CHOCO;
     }
 }
 
@@ -417,7 +391,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         return 0;
     }
 
-    // ---- Находим update.bat рядом с launcher.exe ----
     wchar_t dir[MAX_PATH];
     if (!GetExeDir(dir, MAX_PATH)) {
         MessageBoxW(g_hWnd, L"Не удалось определить путь к лаунчеру.",
@@ -440,7 +413,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
         return 0;
     }
 
-    // ---- Запускаем update.bat отдельным процессом ----
     SHELLEXECUTEINFOW sei = {0};
     sei.cbSize       = sizeof(sei);
     sei.fMask        = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
@@ -458,7 +430,6 @@ static DWORD WINAPI UpdateThread(LPVOID param) {
 
     if (sei.hProcess) CloseHandle(sei.hProcess);
 
-    // ---- Закрываем лаунчер: update.bat сам дождётся ----
     PostMessageW(g_hWnd, WM_CLOSE, 0, 0);
     return 0;
 }
@@ -519,11 +490,10 @@ static void AppendOutputA(const char* text) {
 }
 
 // ============================================================
-// Repository parser: winget.id|choco.id|Name|source
+// Repository parser: winget.id|Name
 // Returns: 1 = package, 2 = category, 0 = EOF
 // ============================================================
 static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
-                                   wchar_t* out_choco, size_t choco_cch,
                                    wchar_t* out_name, size_t name_cch) {
     char line[512];
     while (fgets(line, sizeof(line), f)) {
@@ -559,22 +529,13 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 
         char* part1 = p;
         char* part2 = NULL;
-        char* part3 = NULL;
-        // part4 = source — нам не нужен, просто отбрасываем
 
         char* bar1 = strchr(p, '|');
         if (bar1) {
             *bar1 = '\0';
             part2 = bar1 + 1;
             char* bar2 = strchr(part2, '|');
-            if (bar2) {
-                *bar2 = '\0';
-                part3 = bar2 + 1;
-                char* bar3 = strchr(part3, '|');
-                if (bar3) {
-                    *bar3 = '\0';   // обрезаем по третьему |
-                }
-            }
+            if (bar2) *bar2 = '\0';
         }
 
         #define TRIM(s) do { \
@@ -585,28 +546,17 @@ static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
 
         TRIM(part1);
         if (part2) TRIM(part2);
-        if (part3) TRIM(part3);
         if (*part1 == '\0') continue;
 
         int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part1, -1, NULL, 0);
         if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part1, -1, out_id, (int)id_cch);
         else          MultiByteToWideChar(CP_ACP, 0, part1, -1, out_id, (int)id_cch);
 
-        if (part3) {
-            wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part2, -1, NULL, 0);
-            if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part2, -1, out_choco, (int)choco_cch);
-            else          MultiByteToWideChar(CP_ACP, 0, part2, -1, out_choco, (int)choco_cch);
-
-            wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part3, -1, NULL, 0);
-            if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part3, -1, out_name, (int)name_cch);
-            else          MultiByteToWideChar(CP_ACP, 0, part3, -1, out_name, (int)name_cch);
-        } else if (part2 && *part2 != '\0') {
-            out_choco[0] = L'\0';
+        if (part2 && *part2 != '\0') {
             wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, part2, -1, NULL, 0);
             if (wlen > 0) MultiByteToWideChar(CP_UTF8, 0, part2, -1, out_name, (int)name_cch);
             else          MultiByteToWideChar(CP_ACP, 0, part2, -1, out_name, (int)name_cch);
         } else {
-            out_choco[0] = L'\0';
             wcsncpy(out_name, out_id, name_cch);
             out_name[name_cch - 1] = L'\0';
         }
@@ -637,12 +587,12 @@ static void LoadRepository(void) {
 
     SendMessageW(g_hList, LVM_DELETEALLITEMS, 0, 0);
 
-    wchar_t w_id[256], w_choco[256], w_name[256];
+    wchar_t w_id[256], w_name[256];
     int idx = 0;
     int skipped = 0;
     int rc;
 
-    while ((rc = ReadRepoLine(f, w_id, 256, w_choco, 256, w_name, 256)) != 0) {
+    while ((rc = ReadRepoLine(f, w_id, 256, w_name, 256)) != 0) {
         if (rc == 2) {
             wchar_t header[300];
             _snwprintf(header, 300, L"── %ls ──", w_name);
@@ -660,19 +610,12 @@ static void LoadRepository(void) {
             sub1.pszText = L"";
             SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
 
-            LVITEMW sub2 = {0};
-            sub2.mask = LVIF_TEXT;
-            sub2.iItem = row; sub2.iSubItem = 2;
-            sub2.pszText = L"";
-            SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
-
             ListView_SetCheckState(g_hList, row, FALSE);
             idx++;
             continue;
         }
 
-        // Пропускаем, если ни winget.id, ни choco.id не заполнены
-        if ((!w_id[0]) && (!w_choco[0])) { skipped++; continue; }
+        if (!w_id[0]) { skipped++; continue; }
 
         LVITEMW item = {0};
         item.mask = LVIF_TEXT;
@@ -681,19 +624,11 @@ static void LoadRepository(void) {
         item.pszText = w_name;
         int row = (int)SendMessageW(g_hList, LVM_INSERTITEMW, 0, (LPARAM)&item);
 
-        // Колонка 1: winget.id
         LVITEMW sub1 = {0};
         sub1.mask = LVIF_TEXT;
         sub1.iItem = row; sub1.iSubItem = 1;
         sub1.pszText = w_id;
         SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub1);
-
-        // Колонка 2: choco.id
-        LVITEMW sub2 = {0};
-        sub2.mask = LVIF_TEXT;
-        sub2.iItem = row; sub2.iSubItem = 2;
-        sub2.pszText = w_choco;
-        SendMessageW(g_hList, LVM_SETITEMW, 0, (LPARAM)&sub2);
 
         ListView_SetCheckState(g_hList, row, TRUE);
         idx++;
@@ -701,10 +636,7 @@ static void LoadRepository(void) {
     fclose(f);
 
     wchar_t status[256];
-    const wchar_t* mgr = (g_PkgMgr == PKG_MGR_WINGET) ? L"winget" : L"choco";
-    _snwprintf(status, 256,
-               L"Загружено %d строк (менеджер: %ls, пропущено %d)",
-               idx, mgr, skipped);
+    _snwprintf(status, 256, L"Загружено %d строк (winget, пропущено %d)", idx, skipped);
     SetStatus(status);
 }
 
@@ -713,16 +645,14 @@ static int GetCheckedCount(void) {
     int checked = 0;
     for (int i = 0; i < count; i++) {
         wchar_t wid[256] = {0};
-        wchar_t wchoco[256] = {0};
         ListView_GetItemText(g_hList, i, 1, wid, 256);
-        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
-        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
+        if (wid[0] == L'\0') continue;
         if (ListView_GetCheckState(g_hList, i)) checked++;
     }
     return checked;
 }
 
-// Write .tmp.txt with 3 columns: winget.id|choco.id|Name
+// Write .tmp.txt with 2 columns: winget.id|Name
 static BOOL WriteTmpRepo(const wchar_t* path) {
     FILE* f = _wfopen(path, L"wb");
     if (!f) return FALSE;
@@ -733,26 +663,20 @@ static BOOL WriteTmpRepo(const wchar_t* path) {
 
         wchar_t wname[256]  = {0};
         wchar_t wid[256]    = {0};
-        wchar_t wchoco[256] = {0};
 
         ListView_GetItemText(g_hList, i, 0, wname,  256);
         ListView_GetItemText(g_hList, i, 1, wid,    256);
-        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
 
-        // Пропускаем категории
-        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
+        if (wid[0] == L'\0') continue;
 
         char utf8_wid[1024];
-        char utf8_choco[1024];
         char utf8_name[1024];
 
         WideCharToMultiByte(CP_UTF8, 0, wid,    -1, utf8_wid,   1024, NULL, NULL);
-        WideCharToMultiByte(CP_UTF8, 0, wchoco, -1, utf8_choco, 1024, NULL, NULL);
         WideCharToMultiByte(CP_UTF8, 0, wname,  -1, utf8_name,  1024, NULL, NULL);
 
         char line[4096];
-        _snprintf(line, sizeof(line), "%s|%s|%s\n",
-                  utf8_wid, utf8_choco, utf8_name);
+        _snprintf(line, sizeof(line), "%s|%s\n", utf8_wid, utf8_name);
         fwrite(line, 1, strlen(line), f);
     }
     fclose(f);
@@ -782,8 +706,6 @@ static DWORD WINAPI RunBatThread(LPVOID param) {
     }
 
     SetEnvironmentVariableW(L"REPO_FILE", tmpRepo);
-    SetEnvironmentVariableW(L"PKG_MGR",
-        g_PkgMgr == PKG_MGR_WINGET ? L"winget" : L"choco");
 
     wchar_t cmdLine[MAX_PATH * 2];
     _snwprintf(cmdLine, MAX_PATH * 2, L"cmd.exe /c \"\"%s\"\"", batPath);
@@ -865,8 +787,7 @@ static void OnInstallClicked(void) {
 
     SetWindowTextW(g_hOutput, L"");
     wchar_t msg[128];
-    _snwprintf(msg, 128, L"=== Запуск install_apps.bat (выбрано: %d, менеджер: %ls) ===\r\n\r\n",
-               selected, g_PkgMgr == PKG_MGR_WINGET ? L"winget" : L"choco");
+    _snwprintf(msg, 128, L"=== Запуск install_apps.bat (выбрано: %d, менеджер: winget) ===\r\n\r\n", selected);
     AppendOutput(msg);
     SetStatus(L"Установка...");
     EnableButtons(FALSE);
@@ -904,10 +825,8 @@ static void SetAllCheckState(BOOL state) {
     int count = (int)SendMessageW(g_hList, LVM_GETITEMCOUNT, 0, 0);
     for (int i = 0; i < count; i++) {
         wchar_t wid[256] = {0};
-        wchar_t wchoco[256] = {0};
         ListView_GetItemText(g_hList, i, 1, wid, 256);
-        ListView_GetItemText(g_hList, i, 2, wchoco, 256);
-        if (wid[0] == L'\0' && wchoco[0] == L'\0') continue;
+        if (wid[0] == L'\0') continue;
         ListView_SetCheckState(g_hList, i, state);
     }
 }
@@ -1044,7 +963,7 @@ static void AddSelectedToRepo(void) {
         MessageBoxW(g_hSearchWnd, L"Не удалось открыть repositories.txt", L"Ошибка", MB_ICONERROR);
         return;
     }
-    fwprintf(f, L"%ls||%ls\n", id, name);
+    fwprintf(f, L"%ls|%ls\n", id, name);
     fclose(f);
 
     wchar_t msg[512];
@@ -1256,23 +1175,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         ListView_SetExtendedListViewStyle(g_hList,
             LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
-        // Колонка 0: Name (видимая)
         LVCOLUMNW col0 = {0};
         col0.mask = LVCF_TEXT | LVCF_WIDTH;
         col0.pszText = L"Программа"; col0.cx = 300;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 0, (LPARAM)&col0);
 
-        // Колонка 1: winget.id (скрытая)
         LVCOLUMNW col1 = {0};
         col1.mask = LVCF_TEXT | LVCF_WIDTH;
         col1.pszText = L"ID"; col1.cx = 0;
         SendMessageW(g_hList, LVM_INSERTCOLUMNW, 1, (LPARAM)&col1);
-
-        // Колонка 2: choco.id (скрытая)
-        LVCOLUMNW col2 = {0};
-        col2.mask = LVCF_TEXT | LVCF_WIDTH;
-        col2.pszText = L"Choco"; col2.cx = 0;
-        SendMessageW(g_hList, LVM_INSERTCOLUMNW, 2, (LPARAM)&col2);
 
         SendMessageW(g_hList, WM_SETFONT, (WPARAM)g_hFont, TRUE);
 
@@ -1384,15 +1295,15 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
 
     case WM_APP_UPDATE_DONE: {
-    InterlockedExchange(&g_UpdateRunning, 0);
-    switch (wParam) {
-    case 1: SetStatus(L"Не удалось проверить обновления"); break;
-    case 2: SetStatus(L"У вас последняя версия"); break;
-    case 3: SetStatus(L"Обновление отменено"); break;
-    case 4: SetStatus(L"Ошибка запуска обновления"); break;
+        InterlockedExchange(&g_UpdateRunning, 0);
+        switch (wParam) {
+        case 1: SetStatus(L"Не удалось проверить обновления"); break;
+        case 2: SetStatus(L"У вас последняя версия"); break;
+        case 3: SetStatus(L"Обновление отменено"); break;
+        case 4: SetStatus(L"Ошибка запуска обновления"); break;
+        }
+        return 0;
     }
-    return 0;
-}
 
     case WM_DESTROY: {
         if (g_hFont)     DeleteObject(g_hFont);
@@ -1415,7 +1326,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
         ICC_LISTVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icc);
 
-    // ---- Проверка минимальной версии Windows ----
     RTL_OSVERSIONINFOW osvi = {0};
     if (!IsWindowsSupported(&osvi)) {
         wchar_t msg[512];
@@ -1431,7 +1341,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
                     MB_OK | MB_ICONERROR);
         return 1;
     }
-    // ---------------------------------------------
 
     DetectOS();
 
@@ -1465,9 +1374,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
     RegisterClassExW(&wcSearch);
 
     wchar_t title[256];
-    _snwprintf(title, 256, L"WinGET Launcher — %ls [%ls]",
-               g_PkgMgr == PKG_MGR_WINGET ? L"winget" : L"Chocolatey",
-               g_OSName);
+    _snwprintf(title, 256, L"WinGET Launcher — winget [%ls]", g_OSName);
 
     HWND hWnd = CreateWindowExW(
         0, wc.lpszClassName, title,

@@ -1,9 +1,10 @@
 @echo off
 setlocal
 
-where gcc >nul 2>&1
+:: Проверяем наличие gcc прямым вызовом
+gcc --version >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERROR] gcc not found in PATH.
+    echo [ERROR] gcc not found in PATH. Please add MinGW bin folder to PATH.
     pause
     exit /b 1
 )
