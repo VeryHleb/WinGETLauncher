@@ -1,23 +1,22 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
-title Установка App Installer (winget) и зависимостей
+title LTѦ�T�T�T�T�T�T� App Installer (winget) T� T�T�T�T�T�T�T�T�TѦ�T�T�
 
-:: Проверка прав администратора
+:: T��T�T�TŦ�T�T� TϦ�T�T� T�T�T�T�T�T�TѦĦ�T���TΦ�T�
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ОШИБКА] Запустите этот скрипт от имени Администратора!
+    echo [++L+T�L] T�T�T�T�TѦ�TȦ�T� T��TΦ� T�Tʦ�T�TϦ� TΦ� T�T�T�T�T� LT�T�T�T�T�TѦĦ�T���TΦ�T�!
     pause
     exit /b
 )
 
 cd /d "%~dp0"
 echo ===================================================
-echo   Установка App Installer (winget)
+echo   LTѦ�T�T�T�T�T�T� App Installer (winget)
 echo ===================================================
 echo.
 
-:: Функция установки одного пакета APPX/MSIX/MSIXBUNDLE
+:: LT�T�Tʦ�T�T� T�TѦ�T�T�T�T�T�T� T�T�T�T�T�T� T�T�T�TŦ�T� APPX/MSIX/MSIXBUNDLE
 set "PS_CMD=Add-AppxPackage -Path"
 
 echo [1/5] VCLibs 140.00 (MSIX)...
@@ -47,15 +46,15 @@ for %%f in (Microsoft.DesktopAppInstaller_*.msixbundle Microsoft.DesktopAppInsta
 
 echo.
 echo ===================================================
-echo   Проверка установки winget
+echo   T��T�T�TŦ�T�T� T�TѦ�T�T�T�T�T�T� winget
 echo ===================================================
 where winget >nul 2>&1
 if %errorLevel% equ 0 (
-    echo [OK] winget успешно установлен!
+    echo [OK] winget T�T�T�T�T-T�T� T�TѦ�T�T�T�T�T�T�T�!
     winget --version
 ) else (
-    echo [ВНИМАНИЕ] winget не найден в PATH. 
-    echo Попробуйте перезайти в систему или запустить:
+    echo [T=LT�L=L+] winget T�T� T�T�T�T�T�T� T� PATH. 
+    echo T�T�TϦ�T�T�T�Tɦ�T� T�TŦ�T�T�T�Tɦ�T� T� T�T�TѦ�T�T�T� T�T�T� T�T�T�T�TѦ�TȦ����:
     echo   winget --version
 )
 echo.
