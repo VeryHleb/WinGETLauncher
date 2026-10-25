@@ -1,19 +1,24 @@
 # ============================================================
 #  WinGET Launcher — Files list for auto-update
-#  Один файл на строку. Путь указывается относительно корня
-#  репозитория (main/).
 # ============================================================
 
-# --- Основные скрипты ---
+# --- Основные скрипты (скачиваются из ветки main) ---
 install_apps.bat
 version.txt
 launcher.exe
 
-# --- Папка source ---
+# --- Папка source (скрипты из ветки main) ---
 source/repositories.txt
 source/install_winget.bat
 source/search_winget.bat
 source/search_winget.ps1
 
-# --- TgWsProxy (большой бинарник — обновляется отдельно) ---
-# source/exe/TgWsProxy_windows_7_64bit.exe
+# --- Зависимости winget (прямые ссылки на GitHub Releases) ---
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.DesktopAppInstaller_2026.917.151.0_neutral_._8wekyb3d8bbwe.Msixbundle
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.NET.Native.Framework.2.2_2.2.29512.0_x64__8wekyb3d8bbwe.Appx
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.NET.Native.Runtime.2.2_2.2.28604.0_x64__8wekyb3d8bbwe.Appx
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.UI.Xaml.2.8_8.2501.31001.0_x64__8wekyb3d8bbwe.Appx
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.VCLibs.140.00.UWPDesktop_14.0.33728.0_x64_8wekyb3d8bbwe.Appx
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.VCLibs.140.00_14.0.33519.0_x64_8wekyb3d8bbwe.Appx
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.WindowsAppRuntime.1.8_8000.994.2142.0_x64__8wekyb3d8bbwe.Msix
+https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Microsoft.WindowsStore_22609.1401.6.0_neutral_._8wekyb3d8bbwe.Msixbundle
