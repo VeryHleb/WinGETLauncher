@@ -6,27 +6,37 @@ title WinGET Launcher — Обновление
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
+:: ============================================================
+:: НАСТРОЙКИ GITHUB
+:: ============================================================
 set "GH_RAW=https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 set "TMP_LIST=%TEMP%\wl_files.txt"
 set "SELF_NAME=update.bat"
+set "BS=\"
 
 echo ===================================================
 echo   WinGET Launcher - Обновление
 echo ===================================================
 echo.
-echo   Директория: %ROOT%
-echo.
 
 :: ---- Ждём закрытия launcher.exe ----
 echo [INFO] Ожидание закрытия launcher.exe...
+set /a WAIT_COUNT=0
 :wait_launcher
 tasklist /FI "IMAGENAME eq launcher.exe" 2>nul | find /I "launcher.exe" >nul
 if not errorlevel 1 (
+    set /a WAIT_COUNT+=1
+    if !WAIT_COUNT! gtr 10 (
+        echo [WARN] launcher.exe не закрылся за 10 секунд. Принудительное завершение...
+        taskkill /F /IM launcher.exe >nul 2>&1
+        timeout /t 1 /nobreak >nul
+        goto wait_done
+    )
     timeout /t 1 /nobreak >nul
     goto wait_launcher
 )
-timeout /t 2 /nobreak >nul
-echo [OK]   launcher.exe закрыт.
+:wait_done
+echo [OK] launcher.exe закрыт.
 echo.
 
 :: ---- Скачиваем files.txt ----
@@ -38,42 +48,30 @@ if not exist "%TMP_LIST%" (
     goto end_error
 )
 
-:: ---- Считаем количество файлов ----
-set /a TOTAL_COUNT=0
-for /f "usebackq tokens=* eol=#" %%L in ("%TMP_LIST%") do (
-    set "LINE=%%L"
-    if not "!LINE!"=="" set /a TOTAL_COUNT+=1
-)
-
-if %TOTAL_COUNT% equ 0 (
-    echo [ERROR] Список файлов пуст.
-    goto end_error
-)
-
-echo [INFO] Файлов для обновления: %TOTAL_COUNT%
-echo.
-
-:: ---- Удаляем и скачиваем каждый файл ----
 set /a OK_COUNT=0
 set /a FAIL_COUNT=0
 set /a SKIP_COUNT=0
 
+:: Читаем файл
 for /f "usebackq tokens=* eol=#" %%L in ("%TMP_LIST%") do (
-    set "REL=%%L"
-    if not "!REL!"=="" (
-        call :ReplaceOne "!REL!"
+    set "LINE=%%L"
+    :: Очистка от пробелов и невидимых символов
+    set "LINE=!LINE: =!"
+    set "LINE=!LINE:	=!"
+    
+    if not "!LINE!"=="" (
+        call :ProcessLine "!LINE!"
     )
 )
 
-:: ---- Обновляем version.txt ----
-call :ReplaceOne "version.txt"
+:: ---- Обновляем version.txt (принудительно) ----
+call :ProcessLine "version.txt"
 
 echo.
 echo ===================================================
 echo   Обновление завершено
 echo ===================================================
 echo   Успешно: %OK_COUNT%
-echo   Пропущено (в работе): %SKIP_COUNT%
 echo   Ошибок:  %FAIL_COUNT%
 echo ===================================================
 echo.
@@ -81,101 +79,76 @@ echo.
 del "%TMP_LIST%" >nul 2>&1
 
 :: ---- Перезапускаем лаунчер ----
-echo [INFO] Запуск лаунчера...
-if exist "%ROOT%\launcher.exe" (
-    start "" "%ROOT%\launcher.exe"
-) else (
-    echo [WARN] launcher.exe не найден. Запустите вручную.
-)
-
+if exist "%ROOT%\launcher.exe" start "" "%ROOT%\launcher.exe"
 exit /b 0
 
 :: ============================================================
-:: ReplaceOne <relative/path>
-::   1. Скачивает файл в <DEST>.new
-::   2. Проверяет, что файл скачался
-::   3. Удаляет старый <DEST> (если есть)
-::   4. Переименовывает <DEST>.new -> <DEST>
+:: ProcessLine <line>
 :: ============================================================
-:ReplaceOne
+:ProcessLine
 setlocal
-set "REL=%~1"
-if "%REL%"=="" endlocal & exit /b 1
+set "LINE=%~1"
+if "%LINE%"=="" endlocal & exit /b 1
 
-:: Заменяем / на \ для локального пути
-set "REL_WIN=%REL:/=\%"
-set "DEST=%ROOT%\%REL_WIN%"
-set "NEW=%DEST%.new"
+set "REL=!LINE!"
+:: Заменяем прямые слэши на обратные
+set "REL_WIN=!REL:/=%BS%!"
+set "DEST=%ROOT%\!REL_WIN!"
+set "NEW=!DEST!.new"
 
-:: ---- Пропускаем сам update.bat ----
-if /I "%REL_WIN%"=="%SELF_NAME%" (
-    echo [SKIP] %REL% ^(в работе^)
+:: Пропускаем сам update.bat
+if /I "!REL_WIN!"=="%SELF_NAME%" (
+    echo [SKIP] !REL! ^(в работе^)
     endlocal & set /a SKIP_COUNT+=1
     exit /b 0
 )
 
-:: Создаём директорию назначения
-for %%D in ("%DEST%") do set "DESTDIR=%%~dpD"
-if not exist "%DESTDIR%" mkdir "%DESTDIR%" >nul 2>&1
+set "URL=%GH_RAW%!REL!"
 
-:: Удаляем возможный старый .new
-if exist "%NEW%" del /f /q "%NEW%" >nul 2>&1
+for %%D in ("!DEST!") do set "DESTDIR=%%~dpD"
+if not exist "!DESTDIR!" mkdir "!DESTDIR!" >nul 2>&1
+if exist "!NEW!" del /f /q "!NEW!" >nul 2>&1
 
-:: Формируем URL (с прямыми слэшами)
-set "URL=%GH_RAW%%REL%"
-
-:: ---- 1. Скачиваем во временный .new ----
-echo [GET] %REL%
-curl.exe -fsSL -A "WinGETLauncher-Update/1.0" -o "%NEW%" "%URL%"
-set "RC=%errorlevel%"
-
-if %RC% neq 0 (
-    echo   [FAIL] curl ошибка %RC%
-    if exist "%NEW%" del /f /q "%NEW%" >nul 2>&1
+:: --- Скачиваем ---
+echo [GET] !REL! (GitHub)
+curl.exe -fsSL -A "WinGETLauncher-Update/1.0" -o "!NEW!" "!URL!"
+if !errorlevel! neq 0 (
+    echo   [FAIL] Ошибка скачивания
+    if exist "!NEW!" del /f /q "!NEW!" >nul 2>&1
     endlocal & set /a FAIL_COUNT+=1
     exit /b 1
 )
 
-if not exist "%NEW%" (
+:: --- Проверка и замена ---
+if not exist "!NEW!" (
     echo   [FAIL] Файл не создан
     endlocal & set /a FAIL_COUNT+=1
     exit /b 1
 )
 
-:: Проверяем размер (пустой файл = ошибка)
-for %%F in ("%NEW%") do set "NEWSIZE=%%~zF"
-if "%NEWSIZE%"=="0" (
+for %%F in ("!NEW!") do set "NEWSIZE=%%~zF"
+if "!NEWSIZE!"=="0" (
     echo   [FAIL] Пустой файл
-    del /f /q "%NEW%" >nul 2>&1
+    del /f /q "!NEW!" >nul 2>&1
     endlocal & set /a FAIL_COUNT+=1
     exit /b 1
 )
 
-:: ---- 2. Удаляем старый файл ----
-if exist "%DEST%" (
-    del /f /q "%DEST%" >nul 2>&1
-    if exist "%DEST%" (
-        echo   [WARN] Не удалось удалить старый файл
-        if exist "%NEW%" del /f /q "%NEW%" >nul 2>&1
-        endlocal & set /a FAIL_COUNT+=1
-        exit /b 1
-    )
-    echo   [DEL] %REL%
+if exist "!DEST!" (
+    del /f /q "!DEST!" >nul 2>&1
 )
 
-:: ---- 3. Переименовываем .new -> .DEST ----
-move /y "%NEW%" "%DEST%" >nul 2>&1
-if not exist "%DEST%" (
-    echo   [FAIL] Не удалось переименовать
+move /y "!NEW!" "!DEST!" >nul 2>&1
+if not exist "!DEST!" (
+    echo   [FAIL] Не удалось заменить файл
     endlocal & set /a FAIL_COUNT+=1
     exit /b 1
 )
 
-echo   [OK]  %REL%
+echo   [OK]  Готово
 endlocal & set /a OK_COUNT+=1
 exit /b 0
 
-:: ============================================================
 :end_error
 echo.
 echo [ERROR] Обновление не завершено.
