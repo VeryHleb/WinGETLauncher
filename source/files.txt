@@ -31,7 +31,7 @@ source/7-Zip/History.txt
 source/7-Zip/License.txt
 source/7-Zip/readme.txt
 
-# --- Папка source/7-Zip/Lang (все файлы из скриншотов) ---
+# --- Папка source/7-Zip/Lang  ---
 source/7-Zip/Lang/af.txt
 source/7-Zip/Lang/an.txt
 source/7-Zip/Lang/ar.txt
