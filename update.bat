@@ -1,14 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-chcp 65001 >nul
+:: Без chcp 65001
 title WinGET Launcher — Обновление
 
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
-:: ============================================================
-:: НАСТРОЙКИ GITHUB
-:: ============================================================
 set "GH_RAW=https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 set "TMP_LIST=%TEMP%\wl_files.txt"
 set "SELF_NAME=update.bat"
@@ -45,6 +42,7 @@ if exist "%TMP_LIST%" del "%TMP_LIST%" >nul 2>&1
 curl.exe -fsSL -A "WinGETLauncher-Update/1.0" -o "%TMP_LIST%" "%GH_RAW%source/files.txt"
 if not exist "%TMP_LIST%" (
     echo [ERROR] Не удалось скачать source/files.txt
+    pause
     goto end_error
 )
 
@@ -55,7 +53,6 @@ set /a SKIP_COUNT=0
 :: Читаем файл
 for /f "usebackq tokens=* eol=#" %%L in ("%TMP_LIST%") do (
     set "LINE=%%L"
-    :: Очистка от пробелов и невидимых символов
     set "LINE=!LINE: =!"
     set "LINE=!LINE:	=!"
     
@@ -79,7 +76,13 @@ echo.
 del "%TMP_LIST%" >nul 2>&1
 
 :: ---- Перезапускаем лаунчер ----
-if exist "%ROOT%\launcher.exe" start "" "%ROOT%\launcher.exe"
+if exist "%ROOT%\launcher.exe" (
+    echo [INFO] Перезапуск лаунчера...
+    start "" "%ROOT%\launcher.exe"
+) else (
+    echo [WARN] launcher.exe не найден!
+)
+pause
 exit /b 0
 
 :: ============================================================
@@ -91,7 +94,6 @@ set "LINE=%~1"
 if "%LINE%"=="" endlocal & exit /b 1
 
 set "REL=!LINE!"
-:: Заменяем прямые слэши на обратные
 set "REL_WIN=!REL:/=%BS%!"
 set "DEST=%ROOT%\!REL_WIN!"
 set "NEW=!DEST!.new"

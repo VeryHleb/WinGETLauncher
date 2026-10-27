@@ -16,9 +16,9 @@
 #define GH_VERSION        GH_RAW_BASE L"version.txt"
 
 // ============================================================
-// Minimum supported Windows version
+// Minimum supported Windows version (Windows 10 20H2)
 // ============================================================
-#define WIN10_22H2_BUILD 19045
+#define WIN10_MIN_BUILD 19042
 
 // ============================================================
 // IDs
@@ -203,7 +203,7 @@ static BOOL IsWindowsSupported(RTL_OSVERSIONINFOW* outVer) {
     if (outVer) *outVer = osvi;
 
     if (osvi.dwMajorVersion < 10) return FALSE;
-    if (osvi.dwMajorVersion == 10 && osvi.dwBuildNumber < WIN10_22H2_BUILD) return FALSE;
+    if (osvi.dwMajorVersion == 10 && osvi.dwBuildNumber < WIN10_MIN_BUILD) return FALSE;
     return TRUE;
 }
 
@@ -215,6 +215,33 @@ static void DetectOS(void) {
     } else {
         wcscpy(g_OSName, L"Windows (unknown)");
     }
+}
+
+// ============================================================
+// Check winget installed
+// ============================================================
+static BOOL IsWingetInstalled(void) {
+    wchar_t cmdLine[] = L"winget.exe --version";
+    STARTUPINFOW si = {0};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = {0};
+    
+    wchar_t fullCmd[MAX_PATH * 2];
+    wchar_t sysDir[MAX_PATH];
+    GetSystemDirectoryW(sysDir, MAX_PATH);
+    _snwprintf(fullCmd, MAX_PATH * 2, L"\"%s\\cmd.exe\" /c %s >nul 2>&1", sysDir, cmdLine);
+
+    if (CreateProcessW(NULL, fullCmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        WaitForSingleObject(pi.hProcess, 5000);
+        DWORD rc = 1;
+        GetExitCodeProcess(pi.hProcess, &rc);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        return rc == 0;
+    }
+    return FALSE;
 }
 
 // ============================================================
@@ -490,8 +517,7 @@ static void AppendOutputA(const char* text) {
 }
 
 // ============================================================
-// Repository parser: winget.id|Name
-// Returns: 1 = package, 2 = category, 0 = EOF
+// Repository parser
 // ============================================================
 static int ReadRepoLine(FILE* f, wchar_t* out_id, size_t id_cch,
                                    wchar_t* out_name, size_t name_cch) {
@@ -636,7 +662,7 @@ static void LoadRepository(void) {
     fclose(f);
 
     wchar_t status[256];
-    _snwprintf(status, 256, L"Загружено %d строк (winget, пропущено %d)", idx, skipped);
+    _snwprintf(status, 256, L"Загружено %d строк (пропущено %d)", idx, skipped);
     SetStatus(status);
 }
 
@@ -652,7 +678,6 @@ static int GetCheckedCount(void) {
     return checked;
 }
 
-// Write .tmp.txt with 2 columns: winget.id|Name
 static BOOL WriteTmpRepo(const wchar_t* path) {
     FILE* f = _wfopen(path, L"wb");
     if (!f) return FALSE;
@@ -708,7 +733,9 @@ static DWORD WINAPI RunBatThread(LPVOID param) {
     SetEnvironmentVariableW(L"REPO_FILE", tmpRepo);
 
     wchar_t cmdLine[MAX_PATH * 2];
-    _snwprintf(cmdLine, MAX_PATH * 2, L"cmd.exe /c \"\"%s\"\"", batPath);
+    wchar_t sysDir[MAX_PATH];
+    GetSystemDirectoryW(sysDir, MAX_PATH);
+    _snwprintf(cmdLine, MAX_PATH * 2, L"\"%s\\cmd.exe\" /c \"\"%s\"\"", sysDir, batPath);
 
     SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
     HANDLE hRead = NULL, hWrite = NULL;
@@ -787,7 +814,7 @@ static void OnInstallClicked(void) {
 
     SetWindowTextW(g_hOutput, L"");
     wchar_t msg[128];
-    _snwprintf(msg, 128, L"=== Запуск install_apps.bat (выбрано: %d, менеджер: winget) ===\r\n\r\n", selected);
+    _snwprintf(msg, 128, L"=== Запуск install_apps.bat (выбрано: %d) ===\r\n\r\n", selected);
     AppendOutput(msg);
     SetStatus(L"Установка...");
     EnableButtons(FALSE);
@@ -1310,6 +1337,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         if (g_hFontBold) DeleteObject(g_hFontBold);
         if (g_hBkgBrush) DeleteObject(g_hBkgBrush);
         PostQuitMessage(0);
+        ExitProcess(0); // Принудительное завершение
         return 0;
     }
     }
@@ -1330,19 +1358,51 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
     if (!IsWindowsSupported(&osvi)) {
         wchar_t msg[512];
         _snwprintf(msg, 512,
-            L"Минимальная поддерживаемая версия Windows — Windows 10 22H2 "
+            L"Минимальная поддерживаемая версия Windows — Windows 10 20H2 "
             L"(сборка %d).\n\n"
             L"Ваша версия: %lu.%lu (сборка %lu)\n\n"
             L"Лаунчер будет закрыт.",
-            WIN10_22H2_BUILD,
+            WIN10_MIN_BUILD,
             osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
 
-        MessageBoxW(NULL, msg, L"Неподдерживаемая версия Windows",
-                    MB_OK | MB_ICONERROR);
+        MessageBoxW(NULL, msg, L"Неподдерживаемая версия Windows", MB_OK | MB_ICONERROR);
         return 1;
     }
 
     DetectOS();
+
+    // ---- Проверка winget ----
+    if (!IsWingetInstalled()) {
+        int msgboxID = MessageBoxW(NULL,
+            L"winget не найден.\n\nЗапустить установку winget из source\\install_winget.bat?",
+            L"winget не найден", MB_YESNO | MB_ICONWARNING);
+
+        if (msgboxID == IDYES) {
+            wchar_t dir[MAX_PATH]; GetExeDir(dir, MAX_PATH);
+            wchar_t batPath[MAX_PATH]; _snwprintf(batPath, MAX_PATH, L"%ssource\\install_winget.bat", dir);
+            
+            if (GetFileAttributesW(batPath) != INVALID_FILE_ATTRIBUTES) {
+                SHELLEXECUTEINFOW sei = {0};
+                sei.cbSize = sizeof(sei); 
+                sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+                sei.lpFile = batPath; sei.lpDirectory = dir; sei.nShow = SW_SHOWNORMAL;
+                ShellExecuteExW(&sei);
+                if (sei.hProcess) {
+                    WaitForSingleObject(sei.hProcess, INFINITE);
+                    CloseHandle(sei.hProcess);
+                }
+                
+                wchar_t exePath[MAX_PATH]; GetModuleFileNameW(NULL, exePath, MAX_PATH);
+                ShellExecuteW(NULL, L"open", exePath, NULL, dir, SW_SHOWNORMAL);
+                return 0;
+            } else {
+                MessageBoxW(NULL, L"Файл install_winget.bat не найден.", L"Ошибка", MB_ICONERROR);
+                return 1;
+            }
+        } else {
+            return 1;
+        }
+    }
 
     WNDCLASSEXW wc = {0};
     wc.cbSize = sizeof(wc);
@@ -1374,7 +1434,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmdLine, int nCmd
     RegisterClassExW(&wcSearch);
 
     wchar_t title[256];
-    _snwprintf(title, 256, L"WinGET Launcher — winget [%ls]", g_OSName);
+    _snwprintf(title, 256, L"WinGET Launcher [%ls]", g_OSName);
 
     HWND hWnd = CreateWindowExW(
         0, wc.lpszClassName, title,

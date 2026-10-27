@@ -1,60 +1,78 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
-title LTѦ�T�T�T�T�T�T� App Installer (winget) T� T�T�T�T�T�T�T�T�TѦ�T�T�
+title Установка App Installer (winget) и зависимостей
 
-:: T��T�T�TŦ�T�T� TϦ�T�T� T�T�T�T�T�T�TѦĦ�T���TΦ�T�
+:: Проверка прав администратора
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [++L+T�L] T�T�T�T�TѦ�TȦ�T� T��TΦ� T�Tʦ�T�TϦ� TΦ� T�T�T�T�T� LT�T�T�T�T�TѦĦ�T���TΦ�T�!
+    echo [ОШИБКА] Запустите этот скрипт от имени Администратора!
     pause
     exit /b
 )
 
 cd /d "%~dp0"
 echo ===================================================
-echo   LTѦ�T�T�T�T�T�T� App Installer (winget)
+echo   Установка App Installer (winget)
 echo ===================================================
 echo.
 
-:: LT�T�Tʦ�T�T� T�TѦ�T�T�T�T�T�T� T�T�T�T�T�T� T�T�T�TŦ�T� APPX/MSIX/MSIXBUNDLE
-set "PS_CMD=Add-AppxPackage -Path"
-
+:: Установка зависимостей
 echo [1/5] VCLibs 140.00 (MSIX)...
 for %%f in (Microsoft.VCLibs.140.00_*.msix Microsoft.VCLibs.140.00_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+    if exist "%%f" (
+        echo    Установка: %%~nxf
+        powershell -Command "Add-AppxPackage -Path '%%~ff'" >nul 2>&1
+    )
 )
 
 echo [2/5] VCLibs 140.00 UWPDesktop (MSIX)...
 for %%f in (Microsoft.VCLibs.140.00.UWPDesktop_*.msix Microsoft.VCLibs.140.00.UWPDesktop_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+    if exist "%%f" (
+        echo    Установка: %%~nxf
+        powershell -Command "Add-AppxPackage -Path '%%~ff'" >nul 2>&1
+    )
 )
 
 echo [3/5] UI.Xaml 2.8 (APPX)...
 for %%f in (Microsoft.UI.Xaml.2.8_*.appx Microsoft.UI.Xaml.2.8_*.msix) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+    if exist "%%f" (
+        echo    Установка: %%~nxf
+        powershell -Command "Add-AppxPackage -Path '%%~ff'" >nul 2>&1
+    )
 )
 
 echo [4/5] Windows App Runtime 1.8 (MSIX)...
 for %%f in (Microsoft.WindowsAppRuntime.1.8_*.msix Microsoft.WindowsAppRuntime.1.8_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+    if exist "%%f" (
+        echo    Установка: %%~nxf
+        powershell -Command "Add-AppxPackage -Path '%%~ff'" >nul 2>&1
+    )
 )
 
 echo [5/5] Desktop App Installer (MSIXBUNDLE)...
 for %%f in (Microsoft.DesktopAppInstaller_*.msixbundle Microsoft.DesktopAppInstaller_*.appxbundle) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+    if exist "%%f" (
+        echo    Установка: %%~nxf
+        powershell -Command "Add-AppxPackage -Path '%%~ff'" >nul 2>&1
+    )
 )
 
 echo.
 echo ===================================================
-echo   T��T�T�TŦ�T�T� T�TѦ�T�T�T�T�T�T� winget
+echo   Проверка установки winget
 echo ===================================================
+
+:: Добавляем путь к winget в PATH для текущей сессии (на случай, если его не видно)
+set "PATH=%PATH%;%LOCALAPPDATA%\Microsoft\WindowsApps"
+
 where winget >nul 2>&1
 if %errorLevel% equ 0 (
-    echo [OK] winget T�T�T�T�T-T�T� T�TѦ�T�T�T�T�T�T�T�!
+    echo [OK] winget успешно установлен!
     winget --version
 ) else (
-    echo [T=LT�L=L+] winget T�T� T�T�T�T�T�T� T� PATH. 
-    echo T�T�TϦ�T�T�T�Tɦ�T� T�TŦ�T�T�T�Tɦ�T� T� T�T�TѦ�T�T�T� T�T�T� T�T�T�T�TѦ�TȦ����:
+    echo [ВНИМАНИЕ] winget не найден в PATH. 
+    echo Попробуйте перезайти в систему или запустить:
     echo   winget --version
 )
 echo.

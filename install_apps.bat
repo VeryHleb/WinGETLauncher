@@ -1,7 +1,7 @@
 @echo off
-chcp 65001 >nul
-title Installing apps via winget
 setlocal enabledelayedexpansion
+:: Без chcp 65001 для предотвращения кракозябр
+title Installing apps via winget
 
 set "ROOT=%~dp0"
 set "SOURCE_DIR=%ROOT%source"
@@ -29,7 +29,7 @@ echo [INFO] Repository: %REPO_FILE%
 echo ============================================================ >> "%LOG_FILE%"
 echo   install session started at %date% %time%                 >> "%LOG_FILE%"
 echo   Repository: %REPO_FILE%                                 >> "%LOG_FILE%"
-echo   Manager: winget                                          >> "%LOG_FILE%"
+echo   Manager: winget (no msstore)                             >> "%LOG_FILE%"
 echo ============================================================ >> "%LOG_FILE%"
 
 net session >nul 2>&1
@@ -47,25 +47,15 @@ if not exist "%REPO_FILE%" (
 )
 
 :: ============================================================
-:: Проверка winget и инициализация msstore
+:: Проверка winget
 :: ============================================================
-where winget >nul 2>&1
+winget --version >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [ERROR] winget not found. Install App Installer first.
+    echo [ERROR] winget not found or not in PATH.
     echo [ERROR] winget not found >> "%LOG_FILE%"
     echo [BAT_DONE] rc=2
     if not defined REPO_FILE pause
     exit /b 2
-)
-
-echo [INFO] Initializing msstore source...
-echo [INFO] Initializing msstore source... >> "%LOG_FILE%"
-winget source update --accept-source-agreements --disable-interactivity >nul 2>&1
-if %errorLevel% neq 0 (
-    echo [WARN] msstore init failed, trying reset...
-    echo [WARN] msstore init failed, trying reset... >> "%LOG_FILE%"
-    winget source reset --force --accept-source-agreements >nul 2>&1
-    winget source update --accept-source-agreements --disable-interactivity >nul 2>&1
 )
 
 set /a CNT_OK=0
@@ -135,28 +125,13 @@ goto :after_loop
         exit /b 0
     )
 
-    :: ---- 1) Try winget ----
+    :: ---- Установка ТОЛЬКО через winget ----
     winget install --id "!PKG!" --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
     if !errorLevel! equ 0 goto :install_ok
 
     winget list --id "!PKG!" --source winget >nul 2>&1
     if !errorLevel! equ 0 (
         echo [SKIP] !PKG! already installed ^(winget, verified^).
-        echo [SKIP] !PKG! >> "%LOG_FILE%"
-        endlocal & set /a CNT_SKIP+=1
-        exit /b 0
-    )
-
-    :: ---- 2) Fallback: msstore ----
-    echo [INFO] winget failed for !PKG!. Trying msstore...
-    echo [INFO] winget failed, trying msstore >> "%LOG_FILE%"
-
-    winget install --id "!PKG!" --source msstore --silent --accept-package-agreements --accept-source-agreements --disable-interactivity >> "%LOG_FILE%" 2>&1
-    if !errorLevel! equ 0 goto :install_ok
-
-    winget list --id "!PKG!" --source msstore >nul 2>&1
-    if !errorLevel! equ 0 (
-        echo [SKIP] !PKG! already installed ^(msstore, verified^).
         echo [SKIP] !PKG! >> "%LOG_FILE%"
         endlocal & set /a CNT_SKIP+=1
         exit /b 0
