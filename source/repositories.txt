@@ -113,3 +113,7 @@ BitTorrentLimited.uTorrentWeb|uTorrent Web
 # ============================================================
 #  Конец списка
 # ============================================================
+Hiddify.Next|Hiddify Next
+CodecGuide.K-LiteCodecPack.Mega|K-Lite Mega Codec Pack
+
+GitHub.GitHubDesktop|GitHub Desktop
