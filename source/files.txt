@@ -10,7 +10,6 @@ update.bat
 
 # --- Папка source ---
 source/repositories.txt
-source/install_winget.bat
 source/search_winget.bat
 source/search_winget.ps1
 source/files.txt
