@@ -1,0 +1,39 @@
+=== WinGET Launcher Update started at 29.10.2026 22:25:41,76 === 
+[INFO] Waiting for launcher.exe... 
+[OK] launcher.exe closed. 
+[INFO] Downloading file list... 
+[DEBUG] Starting to parse files.txt... 
+[DEBUG] Parsing line 1: install_apps.bat 
+[GET] install_apps.bat (GitHub) 
+[DEBUG] Parsing line 2: version.txt 
+[GET] version.txt (GitHub) 
+[DEBUG] Parsing line 3: launcher.exe 
+[GET] launcher.exe (GitHub) 
+[DEBUG] Parsing line 4: update.bat 
+[SKIP] update.bat (in use) 
+[DEBUG] Parsing line 5: source/repositories.txt 
+[GET] source/repositories.txt (GitHub) 
+[DEBUG] Parsing line 6: source/search_winget.bat 
+[GET] source/search_winget.bat (GitHub) 
+[DEBUG] Parsing line 7: source/search_winget.ps1 
+[GET] source/search_winget.ps1 (GitHub) 
+[DEBUG] Parsing line 8: source/files.txt 
+[GET] source/files.txt (GitHub) 
+[DEBUG] Parsing line 9: source/7-Zip/7z.exe 
+[GET] source/7-Zip/7z.exe (GitHub) 
+[DEBUG] Parsing line 10: source/7-Zip/7z.dll 
+[GET] source/7-Zip/7z.dll (GitHub) 
+[GET] version.txt (GitHub) 
+[INFO] Checking Winget.7z... 
+[OK] Winget.7z found locally. 
+[INFO] Extracting Winget.7z... 
+[OK] Archive extracted successfully. 
+[INFO] Verifying downloaded files... 
+[OK] All core files are in place. 
+ 
+=================================================== 
+  Update completed 
+  Success: 10 
+  Failed:  0 
+  Lines parsed: 10 
+=================================================== 
