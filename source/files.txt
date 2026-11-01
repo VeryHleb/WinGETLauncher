@@ -13,7 +13,3 @@ source/repositories.txt
 source/search_winget.bat
 source/search_winget.ps1
 source/files.txt
-
-# --- Папка source/7-Zip (минимальный набор для консоли) ---
-source/7-Zip/7z.exe
-source/7-Zip/7z.dll
