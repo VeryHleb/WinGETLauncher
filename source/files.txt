@@ -17,5 +17,3 @@ source/files.txt
 # --- Папка source/7-Zip (минимальный набор для консоли) ---
 source/7-Zip/7z.exe
 source/7-Zip/7z.dll
-
-# --- Архив с winget и зависимостями (прямая ссылка на Releases) ---
