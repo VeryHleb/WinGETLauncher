@@ -9,6 +9,9 @@ launcher.exe
 update.bat
 
 # --- Папка source ---
+
 source/search_winget.bat
 source/search_winget.ps1
 source/repositories.txt
+# --- Папка exe ---
+source/exe/TgWsProxy_windows_7_64bit.exe
