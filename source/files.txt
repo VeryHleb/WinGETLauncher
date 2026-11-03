@@ -11,4 +11,3 @@ update.bat
 # --- Папка source ---
 source/search_winget.bat
 source/search_winget.ps1
-source/files.txt
