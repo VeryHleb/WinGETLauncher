@@ -1,0 +1,15 @@
+# ============================================================
+#  WinGET Launcher — Files list for auto-update
+# ============================================================
+
+# --- Основные скрипты ---
+install_apps.bat
+version.txt
+launcher.exe
+update.bat
+
+# --- Папка source ---
+source/search_winget.bat
+source/search_winget.ps1
+source/files.txt
+source/repositories.txt
