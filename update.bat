@@ -10,9 +10,6 @@ echo === WinGET Launcher Update started at %date% %time% === > "%LOG_FILE%"
 
 set "GH_RAW=https://raw.githubusercontent.com/VeryHleb/WinGETLauncher/main/"
 set "TMP_LIST=%TEMP%\wl_files.txt"
-set "WINGET_ARCHIVE=%ROOT%\source\Winget.7z"
-set "WINGET_URL=https://github.com/VeryHleb/WinGETLauncher/releases/download/WinGETLauncherv1.3-update-fles/Winget.7z"
-set "SEVEN_ZIP=%ROOT%\source\7-Zip\7z.exe"
 
 echo ===================================================
 echo   WinGET Launcher - Update
@@ -34,7 +31,7 @@ echo [OK] launcher.exe closed. >> "%LOG_FILE%"
 echo.
 
 :: ============================================================
-:: 1. DOWNLOAD FILES.TXT AND UPDATE SCRIPTS
+:: 1. DOWNLOAD FILES.TXT AND UPDATE FILES
 :: ============================================================
 echo [INFO] Downloading file list...
 echo [INFO] Downloading file list... >> "%LOG_FILE%"
@@ -79,55 +76,10 @@ for /f "usebackq tokens=* eol=#" %%L in (`findstr /r "^[a-zA-Z0-9#]" "%TMP_LIST%
 
 :: Force version.txt
 call :ProcessLine "version.txt"
-
-:: ============================================================
-:: 2. WINGET ARCHIVE CHECK & EXTRACTION
-:: ============================================================
-echo.
-echo [INFO] Checking Winget.7z...
-echo [INFO] Checking Winget.7z... >> "%LOG_FILE%"
-
-if not exist "%ROOT%\source" mkdir "%ROOT%\source"
-
-if not exist "%WINGET_ARCHIVE%" (
-    echo [INFO] Winget.7z not found. Downloading...
-    echo [INFO] Winget.7z not found. Downloading... >> "%LOG_FILE%"
-    
-    curl.exe -fSL -L -C - --retry 5 --retry-delay 2 -A "WinGETLauncher-Update/1.0" -o "%WINGET_ARCHIVE%" "%WINGET_URL%"
-    if !errorlevel! neq 0 (
-        echo [ERROR] Failed to download Winget.7z
-        echo [ERROR] Failed to download Winget.7z >> "%LOG_FILE%"
-        goto end_error
-    )
-) else (
-    echo [OK] Winget.7z found locally. Skipping download.
-    echo [OK] Winget.7z found locally. >> "%LOG_FILE%"
-)
-
-echo [INFO] Extracting Winget.7z...
-echo [INFO] Extracting Winget.7z... >> "%LOG_FILE%"
-
-if exist "%SEVEN_ZIP%" (
-    "%SEVEN_ZIP%" x "%WINGET_ARCHIVE%" -o"%ROOT%\source" -y >nul 2>&1
-    if !errorlevel! equ 0 (
-        echo [OK] Archive extracted successfully.
-        echo [OK] Archive extracted successfully. >> "%LOG_FILE%"
-        
-        :: --- УДАЛЕНИЕ АРХИВА ПОСЛЕ РАСПАКОВКИ ---
-        echo [INFO] Removing Winget.7z...
-        del /f /q "%WINGET_ARCHIVE%" >nul 2>&1
-    ) else (
-        echo [WARN] Extraction failed with errorlevel !errorlevel!.
-        echo [WARN] Extraction failed with errorlevel !errorlevel!. >> "%LOG_FILE%"
-    )
-) else (
-    echo [ERROR] 7z.exe not found at %SEVEN_ZIP%! Cannot extract.
-    echo [ERROR] 7z.exe not found at %SEVEN_ZIP%! >> "%LOG_FILE%"
-)
 echo.
 
 :: ============================================================
-:: 3. VERIFY DOWNLOADED FILES
+:: 2. VERIFY DOWNLOADED FILES
 :: ============================================================
 echo [INFO] Verifying downloaded files...
 echo [INFO] Verifying downloaded files... >> "%LOG_FILE%"
@@ -180,7 +132,7 @@ echo =================================================== >> "%LOG_FILE%"
 del "%TMP_LIST%" >nul 2>&1
 
 :: ============================================================
-:: 4. RESTART LAUNCHER
+:: 3. RESTART LAUNCHER
 :: ============================================================
 if exist "%ROOT%\launcher.exe" (
     echo [INFO] Restarting launcher...
