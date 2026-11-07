@@ -13,7 +13,5 @@ update.bat
 source/search_winget.bat
 source/search_winget.ps1
 source/repositories.txt
-source/7-zip/7z.dll
-source/7-zip/7z.exe
 # --- Папка exe ---
 source/exe/TgWsProxy_windows_7_64bit.exe
