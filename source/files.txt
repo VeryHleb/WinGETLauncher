@@ -4,7 +4,6 @@
 
 # --- Основные скрипты ---
 install_apps.bat
-version.txt
 launcher.exe
 setup.exe
 
