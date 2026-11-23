@@ -6,7 +6,7 @@
 install_apps.bat
 version.txt
 launcher.exe
-update.bat
+setup.exe
 
 # --- Папка source ---
 source/search_winget.bat
