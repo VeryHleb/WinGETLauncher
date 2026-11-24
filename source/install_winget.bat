@@ -1,61 +1,55 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
-title LTÑ¦ÄTÀTÍTÎTÂTÊTÀ App Installer (winget) TÈ TÇTÀTÂTÈTÑTÈTÌTÎTÑ¦ÄTÅTÉ
 
-:: Tæ¦ÁTÎTÂTÅ¦ÁTÊTÀ TÏ¦ÁTÀTÂ TÀTÄTÌTÈTÍTÈTÑ¦Ä¦ÁTÀ¦ÄTÎ¦ÁTÀ
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo [++L+TæL] TæTÀTÏTÔTÑ¦ÄTÈ¦ÄTÅ Tä¦ÄTÎ¦Ä TÑTÊ¦ÁTÈTÏ¦Ä TÎ¦Ä TÈTÌTÅTÍTÈ LTÄTÌTÈTÍTÈTÑ¦Ä¦ÁTÀ¦ÄTÎ¦ÁTÀ!
-    pause
-    exit /b
-)
-
-cd /d "%~dp0"
-echo ===================================================
-echo   LTÑ¦ÄTÀTÍTÎTÂTÊTÀ App Installer (winget)
-echo ===================================================
+echo ========================================================
+echo           WinGet Offline Installer Utility
+echo ========================================================
 echo.
 
-:: LTÔTÍTÊ¦ÎTÈTà TÔTÑ¦ÄTÀTÍTÎTÂTÊTÈ TÎTÄTÍTÎTÃTÎ TÏTÀTÊTÅ¦ÄTÀ APPX/MSIX/MSIXBUNDLE
-set "PS_CMD=Add-AppxPackage -Path"
+echo [INFO] Checking for WinGet...
+winget --version >nul 2>&1
+if !errorlevel! equ 0 (
+    echo [OK] WinGet is already installed and working.
+    goto end
+)
+
+echo [INFO] Installing dependencies and WinGet from current folder...
+echo.
 
 echo [1/5] VCLibs 140.00 (MSIX)...
-for %%f in (Microsoft.VCLibs.140.00_*.msix Microsoft.VCLibs.140.00_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+for %%f in (Microsoft.VCLibs*.appx) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-AppxPackage -Path '%%f' -ErrorAction SilentlyContinue"
 )
 
 echo [2/5] VCLibs 140.00 UWPDesktop (MSIX)...
-for %%f in (Microsoft.VCLibs.140.00.UWPDesktop_*.msix Microsoft.VCLibs.140.00.UWPDesktop_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+for %%f in (Microsoft.VCLibs*.UWPDesktop*.appx) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-AppxPackage -Path '%%f' -ErrorAction SilentlyContinue"
 )
 
 echo [3/5] UI.Xaml 2.8 (APPX)...
-for %%f in (Microsoft.UI.Xaml.2.8_*.appx Microsoft.UI.Xaml.2.8_*.msix) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+for %%f in (Microsoft.UI.Xaml*.appx) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-AppxPackage -Path '%%f' -ErrorAction SilentlyContinue"
 )
 
 echo [4/5] Windows App Runtime 1.8 (MSIX)...
-for %%f in (Microsoft.WindowsAppRuntime.1.8_*.msix Microsoft.WindowsAppRuntime.1.8_*.appx) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+for %%f in (Microsoft.WindowsAppRuntime*.appx) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-AppxPackage -Path '%%f' -ErrorAction SilentlyContinue"
 )
 
 echo [5/5] Desktop App Installer (MSIXBUNDLE)...
-for %%f in (Microsoft.DesktopAppInstaller_*.msixbundle Microsoft.DesktopAppInstaller_*.appxbundle) do (
-    if exist "%%f" powershell -Command "Add-AppxPackage -Path '%%~ff'"
+for %%f in (Microsoft.DesktopAppInstaller_2026.917.151.0_neutral___8wekyb3d8bbwe.msixbundle) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-AppxPackage -Path '%%f' -ForceApplicationShutdown"
 )
 
+:end
 echo.
-echo ===================================================
-echo   Tæ¦ÁTÎTÂTÅ¦ÁTÊTÀ TÔTÑ¦ÄTÀTÍTÎTÂTÊTÈ winget
-echo ===================================================
-where winget >nul 2>&1
-if %errorLevel% equ 0 (
-    echo [OK] winget TÔTÑTÏTÅT-TÍTÎ TÔTÑ¦ÄTÀTÍTÎTÂTËTÅTÍ!
-    winget --version
+winget --version >nul 2>&1
+if !errorlevel! equ 0 (
+    echo [SUCCESS] WinGet successfully installed and ready!
 ) else (
-    echo [T=LTæL=L+] winget TÍTÅ TÍTÀTÉTÄTÅTÍ TÂ PATH. 
-    echo TæTÎTÏ¦ÁTÎTÁTÔTÉ¦ÄTÅ TÏTÅ¦ÁTÅTÇTÀTÉ¦ÄTÈ TÂ TÑTÈTÑ¦ÄTÅTÌTÔ TÈTËTÈ TÇTÀTÏTÔTÑ¦ÄTÈ¦ÄòÄÖ:
-    echo   winget --version
+    echo [ERROR] Installation check failed.
 )
 echo.
 pause
+exit /b 0
